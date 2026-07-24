@@ -239,38 +239,41 @@ export const TopBar: React.FC<TopBarProps> = ({
           <div className="flex items-center space-x-1 overflow-x-auto scrollbar-none">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition ${
+              className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-bold whitespace-nowrap transition ${
                 activeTab === 'dashboard'
                   ? 'bg-amber-500 text-slate-950 shadow-md ring-1 ring-amber-300'
                   : 'text-amber-300 hover:text-amber-200 hover:bg-amber-900/30 border border-amber-500/30'
               }`}
             >
               <Layout className="w-3.5 h-3.5" />
-              <span>Modular Screen Canvas</span>
+              <span className="hidden md:inline">Modular Screen Canvas</span>
+              <span className="md:hidden">Canvas</span>
             </button>
 
             <button
               onClick={() => setActiveTab('players')}
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+              className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
                 activeTab === 'players'
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Players & Status</span>
+              <span className="hidden md:inline">Players & Status</span>
+              <span className="md:hidden">Players</span>
             </button>
 
           <button
             onClick={() => setActiveTab('encounter')}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+            className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
               activeTab === 'encounter'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
             <Swords className="w-3.5 h-3.5" />
-            <span>Active Combat Runner</span>
+            <span className="hidden md:inline">Active Combat Runner</span>
+            <span className="md:hidden">Combat</span>
             {sessionState.combatParticipants.length > 0 && (
               <span className="ml-1 bg-red-900/80 text-red-200 px-1.5 py-0.2 text-[10px] rounded-full">
                 {sessionState.combatParticipants.length}
@@ -280,50 +283,54 @@ export const TopBar: React.FC<TopBarProps> = ({
 
           <button
             onClick={() => setActiveTab('adversaries')}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+            className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
               activeTab === 'adversaries'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
             <Skull className="w-3.5 h-3.5" />
-            <span>Adversary Library</span>
+            <span className="hidden md:inline">Adversary Library</span>
+            <span className="md:hidden">Adversaries</span>
           </button>
 
           <button
             onClick={() => setActiveTab('environments')}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+            className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
               activeTab === 'environments'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>Environments & Scenes</span>
+            <span className="hidden md:inline">Environments & Scenes</span>
+            <span className="md:hidden">Environments</span>
           </button>
 
           <button
             onClick={() => setActiveTab('domains')}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+            className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
               activeTab === 'domains'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-            <span>Domain Deck & SRD</span>
+            <span className="hidden md:inline">Domain Deck & SRD</span>
+            <span className="md:hidden">Domains</span>
           </button>
 
           <button
             onClick={() => setActiveTab('clocks')}
-            className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+            className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
               activeTab === 'clocks'
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span>Clocks & Session Notes</span>
+            <span className="hidden md:inline">Clocks & Session Notes</span>
+            <span className="md:hidden">Clocks</span>
           </button>
 
           </div>
@@ -342,9 +349,10 @@ export const TopBar: React.FC<TopBarProps> = ({
               }`}
             >
               <Compass className={`w-3.5 h-3.5 ${vttMode ? 'animate-spin' : ''}`} />
-              <span>{vttMode ? '📋 GM Screen View' : '✨ Foundry VTT Sandbox'}</span>
+              <span className="hidden sm:inline">{vttMode ? '📋 GM Screen View' : '✨ Foundry VTT Sandbox'}</span>
+              <span className="sm:hidden">{vttMode ? '📋 GM Screen' : '✨ VTT Sandbox'}</span>
             </button>
-
+ 
             {/* Quick Customize Button */}
             {!vttMode && onOpenWidgetCatalog && (
               <button
@@ -352,7 +360,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                 className="flex items-center space-x-1.5 px-3 py-1 rounded-md bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold shadow transition shrink-0"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                <span>+ Customize Widgets</span>
+                <span className="hidden sm:inline">+ Customize Widgets</span>
+                <span className="sm:hidden">+ Widgets</span>
               </button>
             )}
           </div>
