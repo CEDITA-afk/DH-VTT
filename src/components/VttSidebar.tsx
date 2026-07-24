@@ -22,13 +22,16 @@ import {
   Minus,
   Trash2,
   RefreshCw,
+  FolderPlus,
+  Pencil,
 } from 'lucide-react';
-import { SessionState, PlayerCharacter, CombatParticipant, CountdownClock, EnvironmentCard, DomainCard } from '../types';
+import { SessionState, PlayerCharacter, CombatParticipant, CountdownClock, EnvironmentCard, DomainCard, Campaign, VttScene } from '../types';
 import { rollDualityDice } from '../utils/dualityDice';
 import { soundFX } from '../utils/audioSynth';
 import { RULES_DATA } from '../data/rulesData';
 import { ADVERSARIES_DATA } from '../data/adversaries';
 import { ENVIRONMENTS_DATA } from '../data/environments';
+import { ITEMS_DATA } from '../data/itemsData';
 
 export interface ChatEntry {
   id: string;
@@ -59,6 +62,11 @@ interface VttSidebarProps {
   onSelectEnvironment: (env: EnvironmentCard) => void;
   onAddAdversaryToCombat: (participant: CombatParticipant) => void;
   onOpenWindow: (type: 'player' | 'adversary' | 'rule', id: string, name: string) => void;
+  campaigns: Campaign[];
+  setCampaigns: React.Dispatch<React.SetStateAction<Campaign[]>>;
+  activeCampaignId: string;
+  setActiveCampaignId: (id: string) => void;
+  activeScene: VttScene | null;
 }
 
 export const VttSidebar: React.FC<VttSidebarProps> = ({
@@ -73,9 +81,193 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
   onSelectEnvironment,
   onAddAdversaryToCombat,
   onOpenWindow,
+  campaigns,
+  setCampaigns,
+  activeCampaignId,
+  setActiveCampaignId,
+  activeScene,
 }) => {
   const [activeTab, setActiveTab] = useState<'chat' | 'combat' | 'scenes' | 'journal' | 'compendium' | 'settings'>('chat');
+  const [isCollapsed, setIsCollapsed] = useState(false);
   
+  // Campaigns & Scenes UI States
+  const [showAddCampaign, setShowAddCampaign] = useState(false);
+  const [newCampaignName, setNewCampaignName] = useState('');
+  const [newCampaignDesc, setNewCampaignDesc] = useState('');
+
+  const [showAddScene, setShowAddScene] = useState(false);
+  const [newSceneName, setNewSceneName] = useState('');
+  const [newSceneDesc, setNewSceneDesc] = useState('');
+  const [newSceneMapUrl, setNewSceneMapUrl] = useState('');
+  const [newSceneTheme, setNewSceneTheme] = useState<'wood' | 'stone' | 'parchment' | 'custom'>('wood');
+
+  const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
+  const [editSceneName, setEditSceneName] = useState('');
+  const [editSceneDesc, setEditSceneDesc] = useState('');
+  const [editSceneMapUrl, setEditSceneMapUrl] = useState('');
+
+  const activeCampaign = campaigns.find((c) => c.id === activeCampaignId) || campaigns[0] || null;
+
+  const handleCreateCampaign = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCampaignName.trim()) return;
+
+    const newCamp: Campaign = {
+      id: 'camp-' + Date.now(),
+      name: newCampaignName,
+      description: newCampaignDesc,
+      scenes: [
+        {
+          id: 'scene-' + Date.now(),
+          name: 'First Battle Map',
+          description: 'A default tactical grid scene.',
+          mapUrl: '',
+          mapTheme: 'wood',
+          gridVisible: true,
+        },
+      ],
+      activeSceneId: 'scene-' + Date.now(),
+    };
+
+    setCampaigns((prev) => [...prev, newCamp]);
+    setActiveCampaignId(newCamp.id);
+    
+    // reset form
+    setNewCampaignName('');
+    setNewCampaignDesc('');
+    setShowAddCampaign(false);
+    soundFX.playHopeChime();
+  };
+
+  const handleDeleteCampaign = (id: string) => {
+    if (campaigns.length <= 1) {
+      alert("You must keep at least one campaign.");
+      return;
+    }
+    const filtered = campaigns.filter((c) => c.id !== id);
+    setCampaigns(filtered);
+    if (activeCampaignId === id) {
+      setActiveCampaignId(filtered[0].id);
+    }
+    soundFX.playClockTick();
+  };
+
+  const handleCreateScene = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newSceneName.trim()) return;
+
+    const newScene: VttScene = {
+      id: 'scene-' + Date.now(),
+      name: newSceneName,
+      description: newSceneDesc,
+      mapUrl: newSceneMapUrl,
+      mapTheme: newSceneTheme,
+      gridVisible: true,
+    };
+
+    setCampaigns((prev) =>
+      prev.map((c) => {
+        if (c.id === activeCampaignId) {
+          return {
+            ...c,
+            scenes: [...c.scenes, newScene],
+            activeSceneId: c.activeSceneId || newScene.id, // set active if none exists
+          };
+        }
+        return c;
+      })
+    );
+
+    // reset form
+    setNewSceneName('');
+    setNewSceneDesc('');
+    setNewSceneMapUrl('');
+    setNewSceneTheme('wood');
+    setShowAddScene(false);
+    soundFX.playHopeChime();
+  };
+
+  const handleDeleteScene = (sceneId: string) => {
+    if (!activeCampaign) return;
+    if (activeCampaign.scenes.length <= 1) {
+      alert("A campaign must have at least one scene.");
+      return;
+    }
+
+    setCampaigns((prev) =>
+      prev.map((c) => {
+        if (c.id === activeCampaignId) {
+          const nextScenes = c.scenes.filter((s) => s.id !== sceneId);
+          let nextActiveSceneId = c.activeSceneId;
+          if (c.activeSceneId === sceneId) {
+            nextActiveSceneId = nextScenes[0].id;
+          }
+          return {
+            ...c,
+            scenes: nextScenes,
+            activeSceneId: nextActiveSceneId,
+          };
+        }
+        return c;
+      })
+    );
+    soundFX.playClockTick();
+  };
+
+  const handleActivateScene = (scene: VttScene) => {
+    setCampaigns((prev) =>
+      prev.map((c) => {
+        if (c.id === activeCampaignId) {
+          return {
+            ...c,
+            activeSceneId: scene.id,
+          };
+        }
+        return c;
+      })
+    );
+
+    // Also update sessionState activeSceneName for compatibility
+    setSessionState((prev) => ({
+      ...prev,
+      activeSceneName: `Scene: ${scene.name}`,
+    }));
+
+    soundFX.playHopeChime();
+  };
+
+  const handleStartEditScene = (scene: VttScene) => {
+    setEditingSceneId(scene.id);
+    setEditSceneName(scene.name);
+    setEditSceneDesc(scene.description);
+    setEditSceneMapUrl(scene.mapUrl || '');
+  };
+
+  const handleSaveEditScene = (sceneId: string) => {
+    setCampaigns((prev) =>
+      prev.map((c) => {
+        if (c.id === activeCampaignId) {
+          return {
+            ...c,
+            scenes: c.scenes.map((s) =>
+              s.id === sceneId
+                ? {
+                    ...s,
+                    name: editSceneName,
+                    description: editSceneDesc,
+                    mapUrl: editSceneMapUrl,
+                  }
+                : s
+            ),
+          };
+        }
+        return c;
+      })
+    );
+    setEditingSceneId(null);
+    soundFX.playHopeChime();
+  };
+
   // Chat Input State
   const [chatInput, setChatInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -83,6 +275,8 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
   // Search States
   const [ruleSearch, setRuleSearch] = useState('');
   const [advSearch, setAdvSearch] = useState('');
+  const [itemSearch, setItemSearch] = useState('');
+  const [itemCategoryFilter, setItemCategoryFilter] = useState<'All' | 'Weapon' | 'Armor' | 'Gear' | 'Magic Item'>('All');
   
   // Sound toggle helper
   const [isAmbientOn, setIsAmbientOn] = useState(false);
@@ -231,7 +425,25 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
   };
 
   return (
-    <div className="w-80 h-full bg-slate-900 border-l border-slate-800 flex flex-col relative select-none">
+    <div className="relative h-full flex shrink-0 select-none z-20">
+      {/* Collapse/Expand Toggle Tab */}
+      <button
+        onClick={() => {
+          setIsCollapsed(!isCollapsed);
+          soundFX.playClockTick();
+        }}
+        className="absolute top-1/2 -translate-y-1/2 -left-6 w-6 h-24 bg-slate-900 hover:bg-slate-850 border border-slate-800 border-r-0 rounded-l-xl flex flex-col items-center justify-center cursor-pointer text-slate-400 hover:text-amber-400 z-30 shadow-lg select-none group transition-all duration-200"
+        title={isCollapsed ? "Expand Right Panel" : "Collapse Right Panel"}
+      >
+        <span className="text-[8px] font-extrabold uppercase transform rotate-90 tracking-widest whitespace-nowrap select-none group-hover:scale-105 transition">
+          {isCollapsed ? '◀ CHAT' : '▶ HIDE'}
+        </span>
+      </button>
+
+      {/* Main Sidebar Contents */}
+      <div className={`h-full bg-slate-900 border-l border-slate-800 flex flex-col relative transition-all duration-300 ease-in-out ${
+        isCollapsed ? 'w-0 border-l-0 overflow-hidden' : 'w-80'
+      }`}>
       {/* VTT Sidebar Tabs */}
       <div className="flex bg-slate-950 border-b border-slate-800 px-1 py-1 text-slate-400 gap-1">
         <button
@@ -324,22 +536,38 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
 
                     {log.type === 'roll' && log.rollResult && (
                       <div className="space-y-2">
-                        {/* Gold / Purple die results */}
-                        <div className="grid grid-cols-2 gap-2 text-center text-xs">
-                          <div className="bg-amber-950/30 border border-amber-500/20 rounded py-1">
-                            <span className="text-[9px] uppercase font-bold text-amber-400 block">Hope Die</span>
-                            <span className="font-mono font-extrabold text-amber-300 text-sm">{log.rollResult.hopeValue}</span>
+                        {log.rollResult.isDuality !== false ? (
+                          /* Gold / Purple duality die results */
+                          <div className="grid grid-cols-2 gap-2 text-center text-xs">
+                            <div className="bg-amber-950/30 border border-amber-500/20 rounded py-1">
+                              <span className="text-[9px] uppercase font-bold text-amber-400 block">Hope Die</span>
+                              <span className="font-mono font-extrabold text-amber-300 text-sm">{log.rollResult.hopeValue}</span>
+                            </div>
+                            <div className="bg-purple-950/30 border border-purple-500/20 rounded py-1">
+                              <span className="text-[9px] uppercase font-bold text-purple-400 block">Fear Die</span>
+                              <span className="font-mono font-extrabold text-purple-300 text-sm">{log.rollResult.fearValue}</span>
+                            </div>
                           </div>
-                          <div className="bg-purple-950/30 border border-purple-500/20 rounded py-1">
-                            <span className="text-[9px] uppercase font-bold text-purple-400 block">Fear Die</span>
-                            <span className="font-mono font-extrabold text-purple-300 text-sm">{log.rollResult.fearValue}</span>
+                        ) : (
+                          /* Polyhedral dice results */
+                          <div className="flex flex-wrap gap-1 justify-center py-1 bg-slate-950/50 p-1.5 rounded-lg border border-slate-900">
+                            {log.rollResult.individualRolls?.map((val, idx) => (
+                              <div key={idx} className="bg-slate-900 border border-slate-750 rounded w-8 h-8 flex flex-col items-center justify-center font-mono">
+                                <span className="text-[7px] text-slate-500 font-bold uppercase">{log.rollResult?.diceType || 'D'}</span>
+                                <span className="font-extrabold text-amber-300 text-xs">{val}</span>
+                              </div>
+                            ))}
                           </div>
-                        </div>
+                        )}
 
                         {/* Roll calculation */}
                         <div className="text-center">
                           <div className="text-[10px] text-slate-400">
-                            Dice ({log.rollResult.hopeValue} + {log.rollResult.fearValue}) + Mod ({log.rollResult.modifier >= 0 ? `+${log.rollResult.modifier}` : log.rollResult.modifier})
+                            {log.rollResult.isDuality !== false ? (
+                              <>Dice ({log.rollResult.hopeValue} + {log.rollResult.fearValue}) + Mod ({log.rollResult.modifier >= 0 ? `+${log.rollResult.modifier}` : log.rollResult.modifier})</>
+                            ) : (
+                              <>Dice ({log.rollResult.individualRolls?.join(' + ')}) + Mod ({log.rollResult.modifier >= 0 ? `+${log.rollResult.modifier}` : log.rollResult.modifier})</>
+                            )}
                           </div>
                           <div className="font-mono font-extrabold text-base text-slate-200">
                             Total: {log.rollResult.total}{' '}
@@ -350,9 +578,11 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
                           <div className={`mt-1 inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase border ${
                             log.rollResult.isCritical
                               ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                              : log.rollResult.outcome.includes('Hope')
-                              ? 'bg-amber-600/10 text-amber-300 border-amber-600/30'
-                              : 'bg-purple-600/10 text-purple-300 border-purple-600/30'
+                              : log.rollResult.outcome.includes('Success') || log.rollResult.outcome === 'Success'
+                              ? 'bg-emerald-900/10 text-emerald-300 border-emerald-900/30'
+                              : log.rollResult.outcome.includes('Failure') || log.rollResult.outcome === 'Failure'
+                              ? 'bg-red-950 text-red-300 border-red-900/30'
+                              : 'bg-slate-800 text-slate-300 border-slate-750'
                           }`}>
                             {log.rollResult.outcome}
                           </div>
@@ -463,57 +693,266 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
           </div>
         )}
 
-        {/* 3. Scenes / Environments Tab */}
+        {/* 3. Scenes / Campaigns Tab */}
         {activeTab === 'scenes' && (
           <div className="p-3 space-y-4">
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase block">Active Environment</span>
-              {sessionState.activeEnvironment ? (
-                <div className="bg-gradient-to-r from-purple-950/20 to-slate-950 border border-purple-500/20 p-3 rounded space-y-2">
-                  <div className="flex justify-between items-center border-b border-slate-900 pb-1">
-                    <span className="font-serif font-bold text-amber-200">{sessionState.activeEnvironment.name}</span>
-                    <span className="bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 rounded text-[9px] font-mono">
-                      DC {sessionState.activeEnvironment.difficulty}
-                    </span>
+            
+            {/* Campaign Selector & Creation */}
+            <div className="space-y-2 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-extrabold text-amber-400 uppercase tracking-wider block">Active Campaign</span>
+                <button
+                  onClick={() => setShowAddCampaign(!showAddCampaign)}
+                  className="text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 text-[10px]"
+                >
+                  <FolderPlus className="w-3.5 h-3.5" />
+                  <span>{showAddCampaign ? 'Cancel' : 'New Campaign'}</span>
+                </button>
+              </div>
+
+              {showAddCampaign ? (
+                <form onSubmit={handleCreateCampaign} className="space-y-2.5 pt-1.5 text-xs">
+                  <div>
+                    <label className="text-[9px] text-slate-400 block mb-1 uppercase">Campaign Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={newCampaignName}
+                      onChange={(e) => setNewCampaignName(e.target.value)}
+                      placeholder="e.g. Citadel of Ashes"
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100"
+                    />
                   </div>
-                  <p className="text-[10px] text-slate-400 select-text leading-relaxed">{sessionState.activeEnvironment.description}</p>
-                </div>
+                  <div>
+                    <label className="text-[9px] text-slate-400 block mb-1 uppercase">Description</label>
+                    <textarea
+                      value={newCampaignDesc}
+                      onChange={(e) => setNewCampaignDesc(e.target.value)}
+                      placeholder="e.g. A high magic story of dark sorcery..."
+                      rows={2}
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100 resize-none"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded shadow transition"
+                  >
+                    Create Campaign
+                  </button>
+                </form>
               ) : (
-                <div className="text-center py-4 text-slate-500">No active environment selected.</div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={activeCampaignId}
+                    onChange={(e) => setActiveCampaignId(e.target.value)}
+                    className="flex-1 bg-slate-900 border border-slate-800 text-slate-200 rounded px-2.5 py-1.5 focus:outline-none focus:border-amber-500 text-xs font-semibold"
+                  >
+                    {campaigns.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => handleDeleteCampaign(activeCampaignId)}
+                    disabled={campaigns.length <= 1}
+                    className="p-1.5 rounded bg-slate-900 hover:bg-red-950/40 border border-slate-800 hover:border-red-500/30 text-slate-400 hover:text-red-400 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                    title="Delete current campaign"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {activeCampaign && !showAddCampaign && (
+                <p className="text-[10px] text-slate-400 mt-1 italic select-text leading-relaxed">
+                  {activeCampaign.description || 'No description provided.'}
+                </p>
               )}
             </div>
 
+            {/* Scenes List & Creator */}
             <div className="space-y-2">
-              <span className="text-[10px] font-bold text-slate-400 uppercase block">Scene Directory</span>
-              <div className="space-y-1.5">
-                {ENVIRONMENTS_DATA.map((env) => {
-                  const isActive = sessionState.activeEnvironment?.id === env.id;
-                  return (
-                    <div
-                      key={env.id}
-                      className={`p-2 rounded border flex justify-between items-center transition ${
-                        isActive ? 'bg-amber-500/10 border-amber-500/50 text-amber-200' : 'bg-slate-950/50 border-slate-800'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-bold">{env.name}</div>
-                        <span className="text-[9px] text-slate-500">Tier {env.tier} • {env.category}</span>
-                      </div>
-                      {!isActive && (
-                        <button
-                          onClick={() => {
-                            onSelectEnvironment(env);
-                            soundFX.playClockTick();
-                          }}
-                          className="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 rounded text-[10px] font-bold border border-slate-700"
-                        >
-                          Activate
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">Scenes Directory</span>
+                <button
+                  onClick={() => setShowAddScene(!showAddScene)}
+                  className="text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 text-[10px]"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{showAddScene ? 'Cancel' : 'Add Scene'}</span>
+                </button>
               </div>
+
+              {showAddScene && (
+                <form onSubmit={handleCreateScene} className="space-y-2.5 pt-1 bg-slate-950/40 p-3 rounded-xl border border-slate-800 text-xs">
+                  <div>
+                    <label className="text-[9px] text-slate-400 block mb-1 uppercase">Scene Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={newSceneName}
+                      onChange={(e) => setNewSceneName(e.target.value)}
+                      placeholder="e.g. Cathedral Vaults"
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-slate-400 block mb-1 uppercase">Description</label>
+                    <input
+                      type="text"
+                      value={newSceneDesc}
+                      onChange={(e) => setNewSceneDesc(e.target.value)}
+                      placeholder="A short tagline or overview..."
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-slate-400 block mb-1 uppercase">Map Background URL</label>
+                    <input
+                      type="url"
+                      value={newSceneMapUrl}
+                      onChange={(e) => setNewSceneMapUrl(e.target.value)}
+                      placeholder="https://example.com/map.jpg"
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100 font-mono text-[10px]"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-slate-400 block mb-1 uppercase">Default Map Theme</label>
+                    <select
+                      value={newSceneTheme}
+                      onChange={(e) => setNewSceneTheme(e.target.value as any)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-slate-100"
+                    >
+                      <option value="wood">Deep Murkwood (Forest Green)</option>
+                      <option value="stone">Dungeon Crypt (Slate Stone)</option>
+                      <option value="parchment">Tactical Parchment (Fantasy Gold)</option>
+                      <option value="custom">Custom Grid Canvas</option>
+                    </select>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded shadow transition"
+                  >
+                    Create Scene
+                  </button>
+                </form>
+              )}
+
+              {activeCampaign && (
+                <div className="space-y-2">
+                  {activeCampaign.scenes.map((sc) => {
+                    const isActivated = activeCampaign.activeSceneId === sc.id;
+                    const isEditing = editingSceneId === sc.id;
+
+                    return (
+                      <div
+                        key={sc.id}
+                        className={`p-3 rounded-xl border transition-all ${
+                          isActivated 
+                            ? 'bg-gradient-to-r from-amber-950/10 to-slate-900 border-amber-500/50 shadow shadow-amber-950' 
+                            : 'bg-slate-950/50 border-slate-850'
+                        }`}
+                      >
+                        {isEditing ? (
+                          <div className="space-y-2 text-xs">
+                            <div>
+                              <label className="text-[9px] text-slate-500 uppercase">Scene Name</label>
+                              <input
+                                type="text"
+                                value={editSceneName}
+                                onChange={(e) => setEditSceneName(e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-slate-200"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] text-slate-500 uppercase">Description</label>
+                              <input
+                                type="text"
+                                value={editSceneDesc}
+                                onChange={(e) => setEditSceneDesc(e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-slate-200"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[9px] text-slate-500 uppercase">Map Image URL</label>
+                              <input
+                                type="text"
+                                value={editSceneMapUrl}
+                                onChange={(e) => setEditSceneMapUrl(e.target.value)}
+                                className="w-full bg-slate-900 border border-slate-700 rounded p-1 text-slate-200 font-mono text-[9px]"
+                              />
+                            </div>
+                            <div className="flex space-x-2 pt-1">
+                              <button
+                                onClick={() => handleSaveEditScene(sc.id)}
+                                className="flex-1 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setEditingSceneId(null)}
+                                className="flex-1 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-bold"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-start">
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1.5">
+                                  {isActivated && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />}
+                                  <span className="font-bold text-slate-100 text-[12px]">{sc.name}</span>
+                                </div>
+                                <span className="text-[9px] text-slate-500 font-mono uppercase">
+                                  Theme: {sc.mapTheme} {sc.mapUrl ? '• Custom Image Background' : ''}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center space-x-1.5">
+                                <button
+                                  onClick={() => handleStartEditScene(sc)}
+                                  className="p-1 hover:bg-slate-850 rounded text-slate-400 hover:text-amber-400 transition"
+                                  title="Edit scene properties"
+                                >
+                                  <Pencil className="w-3 h-3" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteScene(sc.id)}
+                                  disabled={activeCampaign.scenes.length <= 1}
+                                  className="p-1 hover:bg-slate-850 rounded text-slate-400 hover:text-red-400 disabled:opacity-30 disabled:hover:bg-transparent transition"
+                                  title="Delete scene"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+
+                            <p className="text-[10px] text-slate-400 leading-relaxed select-text">{sc.description}</p>
+
+                            {sc.mapUrl && (
+                              <div className="text-[9px] bg-slate-900 border border-slate-850 text-slate-500 rounded p-1 truncate select-all font-mono">
+                                🔗 {sc.mapUrl}
+                              </div>
+                            )}
+
+                            {!isActivated && (
+                              <button
+                                onClick={() => handleActivateScene(sc)}
+                                className="w-full py-1 bg-slate-800 hover:bg-slate-705 text-slate-200 rounded text-[10px] font-extrabold border border-slate-700 transition"
+                              >
+                                ACTIVATE SCENE
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -641,6 +1080,88 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
                 ))}
               </div>
             </div>
+
+            {/* Daggerheart Items Compendium */}
+            <div className="space-y-2 border-t border-slate-800 pt-3">
+              <span className="text-[10px] font-bold text-slate-400 uppercase block">Foundryborne Items SRD</span>
+              
+              <input
+                type="text"
+                value={itemSearch}
+                onChange={(e) => setItemSearch(e.target.value)}
+                placeholder="Search items (e.g. sword, potion, cloak)..."
+                className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs focus:outline-none focus:border-amber-500"
+              />
+
+              {/* Category Quick Filter Chips */}
+              <div className="flex flex-wrap gap-1 py-1">
+                {(['All', 'Weapon', 'Armor', 'Gear', 'Magic Item'] as const).map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setItemCategoryFilter(cat)}
+                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition uppercase ${
+                      itemCategoryFilter === cat
+                        ? 'bg-amber-500 text-slate-950'
+                        : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-850'
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+                {ITEMS_DATA.filter((item) => {
+                  const matchSearch = item.name.toLowerCase().includes(itemSearch.toLowerCase()) || 
+                                      item.description.toLowerCase().includes(itemSearch.toLowerCase());
+                  const matchCategory = itemCategoryFilter === 'All' || item.category === itemCategoryFilter;
+                  return matchSearch && matchCategory;
+                }).map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-slate-950/60 p-2.5 border border-slate-800/80 rounded-lg space-y-1.5 text-[11px] hover:border-slate-700 transition"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-bold text-amber-200">{item.name}</div>
+                        <span className="text-[9px] text-slate-500 uppercase font-mono tracking-wider">
+                          {item.subCategory || item.category} {item.hands ? `• ${item.hands}H` : ''}
+                        </span>
+                      </div>
+                      <span className="text-[9px] font-semibold text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                        {item.cost || 'Free'}
+                      </span>
+                    </div>
+
+                    <p className="text-[10px] text-slate-400 leading-relaxed italic">{item.description}</p>
+
+                    {/* Meta stats if applicable */}
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-mono border-t border-slate-900 pt-1.5 text-slate-400">
+                      {item.damage && (
+                        <div>
+                          <span className="text-red-400">DMG:</span> {item.damage}
+                        </div>
+                      )}
+                      {item.range && (
+                        <div>
+                          <span className="text-blue-400">RNG:</span> {item.range}
+                        </div>
+                      )}
+                      {item.armorRating !== undefined && (
+                        <div>
+                          <span className="text-amber-400">Armor Rating:</span> +{item.armorRating}
+                        </div>
+                      )}
+                      {item.traitRequirement && (
+                        <div>
+                          <span className="text-purple-400">Req:</span> {item.traitRequirement}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -709,6 +1230,7 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

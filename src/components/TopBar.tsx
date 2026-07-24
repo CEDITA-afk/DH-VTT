@@ -34,6 +34,7 @@ interface TopBarProps {
   onOpenWidgetCatalog?: () => void;
   vttMode: boolean;
   setVttMode: (v: boolean) => void;
+  activeCampaignName?: string;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -49,6 +50,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenWidgetCatalog,
   vttMode,
   setVttMode,
+  activeCampaignName,
 }) => {
   const [isAmbientOn, setIsAmbientOn] = useState(false);
 
@@ -96,8 +98,8 @@ export const TopBar: React.FC<TopBarProps> = ({
                 GM Screen
               </span>
             </div>
-            <p className="text-xs text-slate-400 hidden sm:block">
-              {sessionState.activeSceneName || 'Active Session'}
+            <p className="text-xs text-amber-500/90 font-medium hidden sm:block">
+              {activeCampaignName || 'Active Campaign'}
             </p>
           </div>
         </div>

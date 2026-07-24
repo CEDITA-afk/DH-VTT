@@ -60,6 +60,36 @@ export const VttWindow: React.FC<VttWindowProps> = ({
     document.addEventListener('mouseup', handleMouseUp);
   };
 
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (onFocus) onFocus();
+    
+    // Prevent dragging if clicking buttons
+    const target = e.target as HTMLElement;
+    if (target.closest('button')) return;
+
+    const touch = e.touches[0];
+    const startX = touch.clientX - position.x;
+    const startY = touch.clientY - position.y;
+
+    const handleTouchMove = (moveEvent: TouchEvent) => {
+      if (moveEvent.touches.length === 0) return;
+      const moveTouch = moveEvent.touches[0];
+
+      // Constrain within window limits
+      const nextX = Math.max(10, Math.min(window.innerWidth - 100, moveTouch.clientX - startX));
+      const nextY = Math.max(10, Math.min(window.innerHeight - 80, moveTouch.clientY - startY));
+      setPosition({ x: nextX, y: nextY });
+    };
+
+    const handleTouchEnd = () => {
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
+    };
+
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleTouchEnd);
+  };
+
   return (
     <div
       ref={windowRef}
@@ -78,6 +108,7 @@ export const VttWindow: React.FC<VttWindowProps> = ({
       <div
         ref={dragRef}
         onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
         className="flex items-center justify-between px-3 py-1.5 bg-gradient-to-r from-slate-950 to-slate-900 border-b border-slate-800 cursor-grab active:cursor-grabbing text-xs select-none"
       >
         <div className="flex items-center space-x-1.5 font-serif font-bold text-amber-200 tracking-wider text-[11px] uppercase">

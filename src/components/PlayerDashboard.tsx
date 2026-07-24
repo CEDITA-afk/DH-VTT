@@ -15,6 +15,8 @@ import {
   Trash2,
   Calculator,
   RotateCcw,
+  Download,
+  Upload,
 } from 'lucide-react';
 import { PlayerCharacter, Condition } from '../types';
 import { soundFX } from '../utils/audioSynth';
@@ -46,6 +48,57 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({
   const [rawDamage, setRawDamage] = useState<number>(10);
   const [useArmor, setUseArmor] = useState<boolean>(true);
   const [showAddPlayer, setShowAddPlayer] = useState<boolean>(false);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleExportCharacters = () => {
+    try {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(players, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "daggerheart_characters.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      soundFX.playHopeChime();
+      
+      setNotification({ message: 'Characters exported successfully as daggerheart_characters.json', type: 'success' });
+      setTimeout(() => setNotification(null), 4000);
+    } catch (err) {
+      setNotification({ message: 'Failed to export characters.', type: 'error' });
+      setTimeout(() => setNotification(null), 4000);
+    }
+  };
+
+  const handleImportCharacters = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileReader = new FileReader();
+    if (e.target.files && e.target.files[0]) {
+      fileReader.readAsText(e.target.files[0], "UTF-8");
+      fileReader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target?.result as string);
+          if (Array.isArray(parsed)) {
+            const isValid = parsed.every(p => p.id && p.name);
+            if (isValid) {
+              setPlayers(parsed);
+              soundFX.playHopeChime();
+              setNotification({ message: `Successfully imported ${parsed.length} characters!`, type: 'success' });
+              setTimeout(() => setNotification(null), 4000);
+            } else {
+              setNotification({ message: 'Invalid file format: Each character must have a name.', type: 'error' });
+              setTimeout(() => setNotification(null), 4000);
+            }
+          } else {
+            setNotification({ message: 'Invalid file: JSON must be an array of characters.', type: 'error' });
+            setTimeout(() => setNotification(null), 4000);
+          }
+        } catch (err) {
+          setNotification({ message: 'Error parsing JSON file.', type: 'error' });
+          setTimeout(() => setNotification(null), 4000);
+        }
+      };
+    }
+  };
 
   // New Player Form State
   const [newPlayer, setNewPlayer] = useState({
@@ -212,6 +265,17 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Notification Banner */}
+      {notification && (
+        <div className={`p-3 rounded-xl border text-xs font-semibold text-center transition-all duration-300 ${
+          notification.type === 'success' 
+            ? 'bg-emerald-950/60 border-emerald-500/30 text-emerald-300 shadow-md shadow-emerald-950/55' 
+            : 'bg-red-950/60 border-red-500/30 text-red-300 shadow-md shadow-red-950/55'
+        }`}>
+          {notification.message}
+        </div>
+      )}
+
       {/* Section Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900/80 p-4 rounded-2xl border border-slate-800 shadow-md">
         <div>
@@ -224,7 +288,33 @@ export const PlayerDashboard: React.FC<PlayerDashboardProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center flex-wrap gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImportCharacters}
+            accept=".json"
+            className="hidden"
+          />
+
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition"
+            title="Import characters from a JSON file"
+          >
+            <Upload className="w-3.5 h-3.5 text-amber-400" />
+            <span>Import JSON</span>
+          </button>
+
+          <button
+            onClick={handleExportCharacters}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition"
+            title="Export characters to a JSON file"
+          >
+            <Download className="w-3.5 h-3.5 text-amber-400" />
+            <span>Export JSON</span>
+          </button>
+
           <button
             onClick={resetAllSpotlights}
             className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700 transition"

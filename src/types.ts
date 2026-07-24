@@ -218,9 +218,12 @@ export interface DualityRollResult {
   modifier: number;
   total: number;
   isCritical: boolean;
-  outcome: 'Success with Hope' | 'Success with Fear' | 'Failure with Hope' | 'Failure with Fear' | 'Critical Success';
+  outcome: string;
   targetDifficulty?: number;
   notes?: string;
+  isDuality?: boolean;
+  diceType?: string;
+  individualRolls?: number[];
 }
 
 export interface RuleSection {
@@ -274,3 +277,35 @@ export interface SessionState {
   sessionNotes: string;
   isCombatActive: boolean;
 }
+
+export interface VttScene {
+  id: string;
+  name: string;
+  description: string;
+  mapUrl?: string;
+  mapTheme: 'wood' | 'stone' | 'parchment' | 'custom';
+  gridVisible: boolean;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  description: string;
+  scenes: VttScene[];
+  activeSceneId?: string;
+}
+
+export interface SrdItem {
+  id: string;
+  name: string;
+  category: 'Weapon' | 'Armor' | 'Gear' | 'Magic Item';
+  subCategory?: string;
+  range?: string;
+  damage?: string;
+  armorRating?: number;
+  hands?: 1 | 2;
+  traitRequirement?: string;
+  description: string;
+  cost?: string;
+}
+

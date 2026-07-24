@@ -37,6 +37,8 @@ import {
   EnvironmentCard,
   DashboardWidgetConfig,
   WidgetType,
+  Campaign,
+  VttScene,
 } from './types';
 import { syncService } from './utils/syncService';
 import { soundFX } from './utils/audioSynth';
@@ -125,6 +127,49 @@ const DEFAULT_CHAT_LOG: ChatEntry[] = [
   }
 ];
 
+const DEFAULT_CAMPAIGNS: Campaign[] = [
+  {
+    id: 'camp-1',
+    name: 'The Murkwood Chronicles',
+    description: 'An ancient, swampy wilderness campaign filled with skeletons, rising mist, and mysterious relics.',
+    activeSceneId: 'scene-1-1',
+    scenes: [
+      {
+        id: 'scene-1-1',
+        name: 'The Swamp Ambush',
+        description: 'A tactical grid battle map set in the heart of the Murkwood swamp.',
+        mapUrl: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?q=80&w=1000',
+        mapTheme: 'wood',
+        gridVisible: true,
+      },
+      {
+        id: 'scene-1-2',
+        name: 'Sunken Relic Citadel',
+        description: 'An ancient flooded stone hall deep beneath the marshlands.',
+        mapUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1000',
+        mapTheme: 'stone',
+        gridVisible: true,
+      },
+    ],
+  },
+  {
+    id: 'camp-2',
+    name: 'Shattered Peaks Expedition',
+    description: 'A high-altitude trek across frozen cliffs and wind-swept stone ruins.',
+    activeSceneId: 'scene-2-1',
+    scenes: [
+      {
+        id: 'scene-2-1',
+        name: 'Wyvern\'s Crest Pass',
+        description: 'A treacherous narrow path hanging off the mountain peak.',
+        mapUrl: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000',
+        mapTheme: 'parchment',
+        gridVisible: true,
+      },
+    ],
+  },
+];
+
 interface VttWindowConfig {
   id: string;
   title: string;
@@ -134,6 +179,46 @@ interface VttWindowConfig {
 }
 
 export default function App() {
+  const [campaigns, setCampaigns] = useState<Campaign[]>(() => {
+    const saved = localStorage.getItem('dh_campaigns');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        // fallback
+      }
+    }
+    return DEFAULT_CAMPAIGNS;
+  });
+
+  const [activeCampaignId, setActiveCampaignId] = useState<string>(() => {
+    const saved = localStorage.getItem('dh_active_campaign_id');
+    return saved || 'camp-1';
+  });
+
+  // Save campaigns to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('dh_campaigns', JSON.stringify(campaigns));
+  }, [campaigns]);
+
+  useEffect(() => {
+    localStorage.setItem('dh_active_campaign_id', activeCampaignId);
+  }, [activeCampaignId]);
+
+  const activeCampaign = campaigns.find(c => c.id === activeCampaignId) || campaigns[0] || null;
+  const activeScene = activeCampaign ? (activeCampaign.scenes.find(s => s.id === activeCampaign.activeSceneId) || activeCampaign.scenes[0] || null) : null;
+
+  const handleUpdateActiveScene = (updatedScene: VttScene) => {
+    setCampaigns(prev => prev.map(camp => {
+      if (camp.id === activeCampaignId) {
+        return {
+          ...camp,
+          scenes: camp.scenes.map(sc => sc.id === updatedScene.id ? updatedScene : sc)
+        };
+      }
+      return camp;
+    }));
+  };
   const [widgets, setWidgets] = useState<DashboardWidgetConfig[]>(() => {
     const saved = localStorage.getItem('dh_dashboard_widgets');
     if (saved) {
@@ -369,6 +454,7 @@ export default function App() {
         onOpenWidgetCatalog={() => setIsWidgetCatalogOpen(true)}
         vttMode={vttMode}
         setVttMode={setVttMode}
+        activeCampaignName={activeCampaign?.name}
       />
 
       {vttMode ? (
@@ -436,6 +522,8 @@ export default function App() {
                   }
                 }
               }}
+              activeScene={activeScene}
+              onUpdateActiveScene={handleUpdateActiveScene}
             />
           </div>
 
@@ -626,6 +714,11 @@ export default function App() {
               handleOpenWindow('combat', undefined, 'Active Combat Tracker');
             }}
             onOpenWindow={(type, id, name) => handleOpenWindow(winTypeMapper(type), id, name)}
+            campaigns={campaigns}
+            setCampaigns={setCampaigns}
+            activeCampaignId={activeCampaignId}
+            setActiveCampaignId={setActiveCampaignId}
+            activeScene={activeScene}
           />
         </div>
       ) : (
