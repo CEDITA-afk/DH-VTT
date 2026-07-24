@@ -24,6 +24,8 @@ import {
   RefreshCw,
   FolderPlus,
   Pencil,
+  Download,
+  Upload,
 } from 'lucide-react';
 import { SessionState, PlayerCharacter, CombatParticipant, CountdownClock, EnvironmentCard, DomainCard, Campaign, VttScene } from '../types';
 import { rollDualityDice } from '../utils/dualityDice';
@@ -107,6 +109,90 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
   const [editSceneMapUrl, setEditSceneMapUrl] = useState('');
 
   const activeCampaign = campaigns.find((c) => c.id === activeCampaignId) || campaigns[0] || null;
+
+  const handleExportCampaign = () => {
+    if (!activeCampaign) return;
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(activeCampaign, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    const sanitizedName = activeCampaign.name.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    downloadAnchor.setAttribute("download", `daggerheart_campaign_${sanitizedName}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    soundFX.playHopeChime();
+  };
+
+  const handleExportAllCampaigns = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(campaigns, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `all_daggerheart_campaigns.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    soundFX.playHopeChime();
+  };
+
+  const handleImportCampaigns = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        
+        // Helper to validate a campaign structure
+        const isValidCampaign = (obj: any): obj is Campaign => {
+          return obj && typeof obj === 'object' && typeof obj.name === 'string' && Array.isArray(obj.scenes);
+        };
+
+        if (Array.isArray(parsed)) {
+          // It's an array of campaigns
+          const validCamps = parsed.filter(isValidCampaign);
+          if (validCamps.length === 0) {
+            alert("No valid campaigns found in the imported file.");
+            return;
+          }
+
+          // Merge campaigns with new unique IDs to avoid duplicate key conflicts
+          setCampaigns((prev) => {
+            const updated = [...prev];
+            validCamps.forEach((newC) => {
+              const uniqueId = 'camp-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+              updated.push({
+                ...newC,
+                id: uniqueId,
+              });
+            });
+            return updated;
+          });
+          
+          alert(`Successfully imported ${validCamps.length} campaigns!`);
+          soundFX.playHopeChime();
+        } else if (isValidCampaign(parsed)) {
+          // It's a single campaign
+          const uniqueId = 'camp-' + Date.now();
+          const newCamp = {
+            ...parsed,
+            id: uniqueId,
+          };
+          setCampaigns((prev) => [...prev, newCamp]);
+          setActiveCampaignId(uniqueId);
+          alert(`Successfully imported campaign: "${parsed.name}"!`);
+          soundFX.playHopeChime();
+        } else {
+          alert("Invalid campaign file format. Must be a single campaign JSON or an array of campaigns.");
+        }
+      } catch (err) {
+        alert("Error parsing JSON file: " + (err as Error).message);
+      }
+    };
+    reader.readAsText(file);
+    // Reset file input value so same file can be selected again
+    e.target.value = '';
+  };
 
   const handleCreateCampaign = (e: React.FormEvent) => {
     e.preventDefault();
@@ -765,9 +851,44 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
               )}
 
               {activeCampaign && !showAddCampaign && (
-                <p className="text-[10px] text-slate-400 mt-1 italic select-text leading-relaxed">
-                  {activeCampaign.description || 'No description provided.'}
-                </p>
+                <>
+                  <p className="text-[10px] text-slate-400 mt-1 italic select-text leading-relaxed">
+                    {activeCampaign.description || 'No description provided.'}
+                  </p>
+                  
+                  {/* Campaign Export / Import Toolbar */}
+                  <div className="flex items-center gap-1.5 pt-2 border-t border-slate-800/50 mt-2">
+                    <button
+                      onClick={handleExportCampaign}
+                      className="flex-1 py-1 px-1.5 rounded bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-amber-500/30 text-slate-300 hover:text-amber-400 transition text-[9px] font-bold flex items-center justify-center gap-1"
+                      title="Download the currently active campaign configuration as a JSON file"
+                    >
+                      <Download className="w-2.5 h-2.5" />
+                      <span>Export Active</span>
+                    </button>
+                    <button
+                      onClick={handleExportAllCampaigns}
+                      className="py-1 px-1.5 rounded bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-amber-500/30 text-slate-400 hover:text-amber-400 transition text-[9px] font-bold flex items-center justify-center gap-1"
+                      title="Download all of your campaigns as a single JSON backup file"
+                    >
+                      <Download className="w-2.5 h-2.5" />
+                      <span>All</span>
+                    </button>
+                    <label
+                      className="flex-1 py-1 px-1.5 rounded bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80 hover:border-amber-500/30 text-slate-300 hover:text-amber-400 transition text-[9px] font-bold flex items-center justify-center gap-1 cursor-pointer text-center"
+                      title="Upload and import single or multiple campaigns from a JSON file"
+                    >
+                      <Upload className="w-2.5 h-2.5" />
+                      <span>Import JSON</span>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportCampaigns}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </>
               )}
             </div>
 
