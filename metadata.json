@@ -1,0 +1,6 @@
+{
+  "name": "Daggerheart GM Screen",
+  "description": "Digital GM screen and combat tracker for Daggerheart with real-time player dashboards, adversaries, environments, duality dice roller, and rules reference.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
