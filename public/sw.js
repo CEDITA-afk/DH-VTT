@@ -1,10 +1,10 @@
 const CACHE_NAME = 'daggerheart-gm-screen-v1';
 const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon-192.svg',
-  '/icon-512.svg'
+  './',
+  'index.html',
+  'manifest.json',
+  'icon-192.svg',
+  'icon-512.svg'
 ];
 
 // Install Event - cache the critical static shells
@@ -81,7 +81,7 @@ self.addEventListener('fetch', (event) => {
         .catch((error) => {
           // If completely offline and navigating between pages, fallback to cached main layout
           if (request.mode === 'navigate') {
-            return caches.match('/index.html') || caches.match('/');
+            return caches.match('index.html') || caches.match('./');
           }
           throw error;
         });
