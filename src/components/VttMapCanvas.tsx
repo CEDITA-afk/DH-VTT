@@ -11,6 +11,7 @@ interface MapToken {
   refId: string; // references PlayerCharacter.id or CombatParticipant.id
   x: number; // 0 - 11
   y: number; // 0 - 9
+  scale?: number;
 }
 
 interface VttMapCanvasProps {
@@ -45,7 +46,6 @@ export const VttMapCanvas: React.FC<VttMapCanvasProps> = ({
   const [isRulerMode, setIsRulerMode] = useState<boolean>(false);
   const [isGridVisible, setIsGridVisible] = useState<boolean>(activeScene?.gridVisible !== false);
   const [scale, setScale] = useState<number>(1.0);
-  const [tokenScale, setTokenScale] = useState<number>(1.0);
 
   // GM Foe Spawner Menu & Targeting state
   const [isSpawnMenuOpen, setIsSpawnMenuOpen] = useState(false);
@@ -173,7 +173,7 @@ export const VttMapCanvas: React.FC<VttMapCanvasProps> = ({
       players.forEach((p, idx) => {
         const exist = findExisting('player', p.id);
         if (exist) {
-          updated.push(exist);
+          updated.push({ ...exist, scale: exist.scale ?? 1.0 });
         } else {
           // Spawn in left-side area (col 1, distributed vertically)
           updated.push({
@@ -183,6 +183,7 @@ export const VttMapCanvas: React.FC<VttMapCanvasProps> = ({
             refId: p.id,
             x: 1,
             y: Math.min(ROWS - 1, idx + 2),
+            scale: 1.0,
           });
         }
       });
@@ -191,7 +192,7 @@ export const VttMapCanvas: React.FC<VttMapCanvasProps> = ({
       combatParticipants.forEach((adv, idx) => {
         const exist = findExisting('adversary', adv.id);
         if (exist) {
-          updated.push(exist);
+          updated.push({ ...exist, scale: exist.scale ?? 1.0 });
         } else {
           // Check if custom spawning coordinates are registered
           const tokenKey = `token-adv-${adv.id}`;
@@ -207,6 +208,7 @@ export const VttMapCanvas: React.FC<VttMapCanvasProps> = ({
             refId: adv.id,
             x: pending ? pending.x : defaultX,
             y: pending ? pending.y : defaultY,
+            scale: 1.0,
           });
 
           // Clean up pending spawn coordinates once consumed
@@ -262,12 +264,28 @@ export const VttMapCanvas: React.FC<VttMapCanvasProps> = ({
       const mouseX = clientX - rect.left;
       const mouseY = clientY - rect.top;
 
-      const gridX = Math.max(0, Math.min(COLS - 1, Math.floor(mouseX / cellWidth)));
-      const gridY = Math.max(0, Math.min(ROWS - 1, Math.floor(mouseY / cellHeight)));
+      setTokens((prev) => {
+        const targetToken = prev.find((t) => t.id === draggingToken);
+        if (!targetToken) return prev;
 
-      setTokens((prev) =>
-        prev.map((t) => (t.id === draggingToken ? { ...t, x: gridX, y: gridY } : t))
-      );
+        const isSmaller = (targetToken.scale ?? 1.0) < 0.99;
+        let gridX: number;
+        let gridY: number;
+
+        if (isSmaller) {
+          // Free movement: position is mouse position converted to cell coordinates, offset to center
+          const rawX = mouseX / cellWidth - 0.5;
+          const rawY = mouseY / cellHeight - 0.5;
+          gridX = Math.max(0, Math.min(COLS - 1, rawX));
+          gridY = Math.max(0, Math.min(ROWS - 1, rawY));
+        } else {
+          // Standard grid snapping
+          gridX = Math.max(0, Math.min(COLS - 1, Math.floor(mouseX / cellWidth)));
+          gridY = Math.max(0, Math.min(ROWS - 1, Math.floor(mouseY / cellHeight)));
+        }
+
+        return prev.map((t) => (t.id === draggingToken ? { ...t, x: gridX, y: gridY } : t));
+      });
     };
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
@@ -520,26 +538,6 @@ export const VttMapCanvas: React.FC<VttMapCanvasProps> = ({
             </button>
           </div>
 
-          {/* Token Size Controls */}
-          <div className="flex items-center space-x-1.5 bg-slate-900 border border-slate-800 rounded px-2 py-0.5 text-[10px]" title="Token Scale Size">
-            <span className="text-slate-400 font-bold mr-0.5 select-none">Tokens:</span>
-            <button
-              onClick={() => setTokenScale(prev => Math.max(0.4, prev - 0.1))}
-              className="text-slate-400 hover:text-amber-400 font-extrabold w-3 text-center transition"
-            >
-              -
-            </button>
-            <span className="font-mono text-amber-400 min-w-[32px] text-center font-bold">
-              {Math.round(tokenScale * 100)}%
-            </span>
-            <button
-              onClick={() => setTokenScale(prev => Math.min(2.5, prev + 0.1))}
-              className="text-slate-400 hover:text-amber-400 font-extrabold w-3 text-center transition"
-            >
-              +
-            </button>
-          </div>
-
           {/* Theme Selector */}
           <select
             value={mapTheme}
@@ -728,7 +726,7 @@ export const VttMapCanvas: React.FC<VttMapCanvasProps> = ({
                   height: `${100 / ROWS}%`,
                   left: `${(token.x * 100) / COLS}%`,
                   top: `${(token.y * 100) / ROWS}%`,
-                  transform: `scale(${(1 / scale) * tokenScale * (isDragging ? 1.12 : isSelected ? 1.06 : 1)})`,
+                  transform: `scale(${(token.scale ?? 1.0) * (isDragging ? 1.12 : isSelected ? 1.06 : 1)})`,
                 }}
               >
                 {/* Visual Avatar */}
@@ -753,6 +751,53 @@ export const VttMapCanvas: React.FC<VttMapCanvasProps> = ({
                     />
                   </div>
                 </div>
+
+                {/* Individual Sizing Circles (Plus / Minus) */}
+                {isSelected && (
+                  <>
+                    {/* Shrink Token (Minus) Circle */}
+                    <button
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTokens((prev) =>
+                          prev.map((t) =>
+                            t.id === token.id
+                              ? { ...t, scale: Math.max(0.4, (t.scale ?? 1.0) - 0.1) }
+                              : t
+                          )
+                        );
+                        soundFX.playClockTick();
+                      }}
+                      className="absolute -top-3.5 -left-3.5 w-6 h-6 rounded-full bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 hover:border-slate-500 shadow-xl flex items-center justify-center font-extrabold text-[13px] z-40 transition-transform active:scale-90"
+                      title="Make token smaller (shrink)"
+                    >
+                      -
+                    </button>
+
+                    {/* Enlarge Token (Plus) Circle */}
+                    <button
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setTokens((prev) =>
+                          prev.map((t) =>
+                            t.id === token.id
+                              ? { ...t, scale: Math.min(2.5, (t.scale ?? 1.0) + 0.1) }
+                              : t
+                          )
+                        );
+                        soundFX.playClockTick();
+                      }}
+                      className="absolute -top-3.5 -right-3.5 w-6 h-6 rounded-full bg-amber-500 hover:bg-amber-400 text-slate-950 border border-amber-300 shadow-xl flex items-center justify-center font-extrabold text-[13px] z-40 transition-transform active:scale-90"
+                      title="Make token larger (enlarge)"
+                    >
+                      +
+                    </button>
+                  </>
+                )}
 
                 {/* Hover/Selection Floating Tag Info */}
                 {isSelected && (

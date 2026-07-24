@@ -235,45 +235,51 @@ export const TopBar: React.FC<TopBarProps> = ({
 
       {/* Main Navigation Tabs */}
       <div className="bg-slate-950/90 border-t border-slate-800/80 px-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between py-1">
-          <div className="flex items-center space-x-1 overflow-x-auto scrollbar-none">
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between py-1.5 lg:py-1 gap-2 lg:gap-0">
+          <div className="flex items-center space-x-1.5 overflow-x-auto py-1 scrollbar-thin scrollbar-thumb-amber-500/30 scrollbar-track-transparent scroll-smooth max-w-full">
             <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-bold whitespace-nowrap transition ${
-                activeTab === 'dashboard'
+              onClick={() => {
+                setActiveTab('dashboard');
+                if (vttMode) setVttMode(false);
+              }}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition ${
+                activeTab === 'dashboard' && !vttMode
                   ? 'bg-amber-500 text-slate-950 shadow-md ring-1 ring-amber-300'
                   : 'text-amber-300 hover:text-amber-200 hover:bg-amber-900/30 border border-amber-500/30'
               }`}
             >
               <Layout className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Modular Screen Canvas</span>
-              <span className="md:hidden">Canvas</span>
+              <span>Modular Screen Canvas</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('players')}
-              className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
-                activeTab === 'players'
+              onClick={() => {
+                setActiveTab('players');
+                if (vttMode) setVttMode(false);
+              }}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+                activeTab === 'players' && !vttMode
                   ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Players & Status</span>
-              <span className="md:hidden">Players</span>
+              <span>Players & Status</span>
             </button>
 
           <button
-            onClick={() => setActiveTab('encounter')}
-            className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
-              activeTab === 'encounter'
+            onClick={() => {
+              setActiveTab('encounter');
+              if (vttMode) setVttMode(false);
+            }}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+              activeTab === 'encounter' && !vttMode
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
             <Swords className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Active Combat Runner</span>
-            <span className="md:hidden">Combat</span>
+            <span>Active Combat Runner</span>
             {sessionState.combatParticipants.length > 0 && (
               <span className="ml-1 bg-red-900/80 text-red-200 px-1.5 py-0.2 text-[10px] rounded-full">
                 {sessionState.combatParticipants.length}
@@ -282,55 +288,63 @@ export const TopBar: React.FC<TopBarProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab('adversaries')}
-            className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
-              activeTab === 'adversaries'
+            onClick={() => {
+              setActiveTab('adversaries');
+              if (vttMode) setVttMode(false);
+            }}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+              activeTab === 'adversaries' && !vttMode
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
             <Skull className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Adversary Library</span>
-            <span className="md:hidden">Adversaries</span>
+            <span>Adversary Library</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('environments')}
-            className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
-              activeTab === 'environments'
+            onClick={() => {
+              setActiveTab('environments');
+              if (vttMode) setVttMode(false);
+            }}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+              activeTab === 'environments' && !vttMode
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Environments & Scenes</span>
-            <span className="md:hidden">Environments</span>
+            <span>Environments & Scenes</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('domains')}
-            className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
-              activeTab === 'domains'
+            onClick={() => {
+              setActiveTab('domains');
+              if (vttMode) setVttMode(false);
+            }}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+              activeTab === 'domains' && !vttMode
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden md:inline">Domain Deck & SRD</span>
-            <span className="md:hidden">Domains</span>
+            <span>Domain Deck & SRD</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('clocks')}
-            className={`flex items-center space-x-1 md:space-x-2 px-2 md:px-3.5 py-1 md:py-1.5 rounded-lg text-[11px] md:text-xs font-semibold whitespace-nowrap transition ${
-              activeTab === 'clocks'
+            onClick={() => {
+              setActiveTab('clocks');
+              if (vttMode) setVttMode(false);
+            }}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition ${
+              activeTab === 'clocks' && !vttMode
                 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Clocks & Session Notes</span>
-            <span className="md:hidden">Clocks</span>
+            <span>Clocks & Session Notes</span>
           </button>
 
           </div>
