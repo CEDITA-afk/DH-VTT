@@ -26,6 +26,9 @@ import {
   Pencil,
   Download,
   Upload,
+  Menu,
+  X,
+  ChevronDown,
 } from 'lucide-react';
 import { SessionState, PlayerCharacter, CombatParticipant, CountdownClock, EnvironmentCard, DomainCard, Campaign, VttScene } from '../types';
 import { rollDualityDice } from '../utils/dualityDice';
@@ -91,6 +94,7 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'chat' | 'combat' | 'scenes' | 'journal' | 'compendium' | 'settings'>('chat');
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
   
   // Campaigns & Scenes UI States
   const [showAddCampaign, setShowAddCampaign] = useState(false);
@@ -530,70 +534,151 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
       <div className={`h-full bg-slate-900 border-l border-slate-800 flex flex-col relative transition-all duration-300 ease-in-out ${
         isCollapsed ? 'w-0 border-l-0 overflow-hidden' : 'w-80'
       }`}>
-      {/* VTT Sidebar Tabs */}
-      <div className="flex bg-slate-950 border-b border-slate-800 px-1 py-1 text-slate-400 gap-1">
-        <button
-          onClick={() => setActiveTab('chat')}
-          className={`flex-1 py-1.5 rounded flex items-center justify-center transition ${
-            activeTab === 'chat' ? 'bg-slate-800 text-amber-300 border border-amber-900/30' : 'hover:bg-slate-900 hover:text-slate-200'
-          }`}
-          title="Chat Log & Roll Feed (💬)"
-        >
-          <MessageSquare className="w-4 h-4" />
-        </button>
+      {/* VTT Sidebar Header with Responsive Hamburger Menu */}
+      <div className="relative bg-slate-950 border-b border-slate-800 px-2 py-1.5 flex items-center justify-between gap-2 z-40 select-none">
+        {/* Hamburger Toggle Button & Active Section Title */}
+        <div className="flex items-center space-x-2 flex-1 min-w-0">
+          <button
+            onClick={() => {
+              setIsHamburgerOpen(!isHamburgerOpen);
+              soundFX.playClockTick();
+            }}
+            className={`flex items-center justify-center min-h-[44px] min-w-[44px] px-2.5 rounded-lg border text-amber-400 transition ${
+              isHamburgerOpen
+                ? 'bg-amber-500/20 border-amber-500 text-amber-300 ring-1 ring-amber-400'
+                : 'bg-slate-900 border-slate-800 hover:bg-slate-850 hover:border-amber-500/50'
+            }`}
+            title="Toggle Sidebar Navigation Menu"
+            aria-label="Toggle Sidebar Navigation Menu"
+          >
+            {isHamburgerOpen ? <X className="w-5 h-5 text-amber-400" /> : <Menu className="w-5 h-5 text-amber-400" />}
+          </button>
 
-        <button
-          onClick={() => setActiveTab('combat')}
-          className={`flex-1 py-1.5 rounded flex items-center justify-center transition ${
-            activeTab === 'combat' ? 'bg-slate-800 text-amber-300 border border-amber-900/30' : 'hover:bg-slate-900 hover:text-slate-200'
-          }`}
-          title="Combat / Initiative Tracker (⚔️)"
-        >
-          <Swords className="w-4 h-4" />
-          {sessionState.combatParticipants.length > 0 && (
-            <span className="absolute ml-5 mb-3 bg-red-600 text-white rounded-full w-2 h-2" />
-          )}
-        </button>
+          {/* Active Section Indicator */}
+          <button
+            onClick={() => {
+              setIsHamburgerOpen(!isHamburgerOpen);
+              soundFX.playClockTick();
+            }}
+            className="flex items-center space-x-2 min-h-[44px] px-2 py-1 rounded-lg bg-slate-900/80 hover:bg-slate-900 border border-slate-800/80 hover:border-slate-700 transition flex-1 min-w-0 text-left"
+          >
+            {activeTab === 'chat' && <MessageSquare className="w-4 h-4 text-amber-400 shrink-0" />}
+            {activeTab === 'combat' && <Swords className="w-4 h-4 text-amber-400 shrink-0" />}
+            {activeTab === 'scenes' && <Map className="w-4 h-4 text-amber-400 shrink-0" />}
+            {activeTab === 'journal' && <Book className="w-4 h-4 text-amber-400 shrink-0" />}
+            {activeTab === 'compendium' && <BookOpen className="w-4 h-4 text-amber-400 shrink-0" />}
+            {activeTab === 'settings' && <Settings className="w-4 h-4 text-amber-400 shrink-0" />}
 
-        <button
-          onClick={() => setActiveTab('scenes')}
-          className={`flex-1 py-1.5 rounded flex items-center justify-center transition ${
-            activeTab === 'scenes' ? 'bg-slate-800 text-amber-300 border border-amber-900/30' : 'hover:bg-slate-900 hover:text-slate-200'
-          }`}
-          title="Scene / Environments Directory (🗺️)"
-        >
-          <Map className="w-4 h-4" />
-        </button>
+            <div className="flex-1 min-w-0">
+              <div className="font-serif font-bold text-xs text-amber-200 truncate leading-tight">
+                {activeTab === 'chat' && 'Chat & Rolls'}
+                {activeTab === 'combat' && 'Combat Runner'}
+                {activeTab === 'scenes' && 'Scenes & Maps'}
+                {activeTab === 'journal' && 'Journal & Clocks'}
+                {activeTab === 'compendium' && 'Compendium'}
+                {activeTab === 'settings' && 'Settings'}
+              </div>
+              <div className="text-[9px] text-slate-400 truncate">Tap to switch section</div>
+            </div>
 
-        <button
-          onClick={() => setActiveTab('journal')}
-          className={`flex-1 py-1.5 rounded flex items-center justify-center transition ${
-            activeTab === 'journal' ? 'bg-slate-800 text-amber-300 border border-amber-900/30' : 'hover:bg-slate-900 hover:text-slate-200'
-          }`}
-          title="Journal entries & clocks (📔)"
-        >
-          <Book className="w-4 h-4" />
-        </button>
+            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform duration-200 ${isHamburgerOpen ? 'rotate-180 text-amber-400' : ''}`} />
+          </button>
+        </div>
 
-        <button
-          onClick={() => setActiveTab('compendium')}
-          className={`flex-1 py-1.5 rounded flex items-center justify-center transition ${
-            activeTab === 'compendium' ? 'bg-slate-800 text-amber-300 border border-amber-900/30' : 'hover:bg-slate-900 hover:text-slate-200'
-          }`}
-          title="Rules & Monsters Compendium (📚)"
-        >
-          <BookOpen className="w-4 h-4" />
-        </button>
+        {/* Compact Quick Icon Strip for Desktop & Tablet */}
+        <div className="flex items-center space-x-1 shrink-0">
+          <button
+            onClick={() => { setActiveTab('chat'); setIsHamburgerOpen(false); soundFX.playClockTick(); }}
+            className={`p-2 min-h-[38px] min-w-[38px] rounded flex items-center justify-center transition ${
+              activeTab === 'chat' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+            title="Chat Log & Roll Feed"
+          >
+            <MessageSquare className="w-4 h-4" />
+          </button>
 
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`flex-1 py-1.5 rounded flex items-center justify-center transition ${
-            activeTab === 'settings' ? 'bg-slate-800 text-amber-300 border border-amber-900/30' : 'hover:bg-slate-900 hover:text-slate-200'
-          }`}
-          title="Game Settings (⚙️)"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
+          <button
+            onClick={() => { setActiveTab('combat'); setIsHamburgerOpen(false); soundFX.playClockTick(); }}
+            className={`p-2 min-h-[38px] min-w-[38px] rounded flex items-center justify-center relative transition ${
+              activeTab === 'combat' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+            }`}
+            title="Active Combat Runner"
+          >
+            <Swords className="w-4 h-4" />
+            {sessionState.combatParticipants.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-red-600 text-white rounded-full w-2 h-2" />
+            )}
+          </button>
+        </div>
+
+        {/* Hamburger Overlay Dropdown Menu */}
+        {isHamburgerOpen && (
+          <div className="absolute top-full left-0 right-0 bg-slate-950/98 border-b-2 border-amber-500/60 shadow-2xl z-50 p-2 space-y-1.5 backdrop-blur-md">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-amber-500/80 px-2 py-1 border-b border-slate-800 flex justify-between items-center">
+              <span>VTT Navigation Sections</span>
+              <button
+                onClick={() => setIsHamburgerOpen(false)}
+                className="text-slate-400 hover:text-white p-1"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Menu Items */}
+            <div className="space-y-1">
+              {[
+                { id: 'chat', label: 'Chat Log & Duality Rolls', icon: MessageSquare, desc: 'View roll history, system alerts & party chat' },
+                { id: 'combat', label: 'Active Combat Runner', icon: Swords, desc: 'Initiative order, adversary HP & stress tracking', badge: sessionState.combatParticipants.length },
+                { id: 'scenes', label: 'Scenes & Environments', icon: Map, desc: 'Manage battleground maps & environmental hazards', badge: activeCampaign?.scenes.length },
+                { id: 'journal', label: 'Journal & Session Clocks', icon: Book, desc: 'Track threat countdown clocks & GM session notes', badge: sessionState.clocks.length },
+                { id: 'compendium', label: 'Compendium & Rules SRD', icon: BookOpen, desc: 'Browse adversaries, domain cards & rulebooks' },
+                { id: 'settings', label: 'Campaign Settings & Export', icon: Settings, desc: 'Manage campaigns, JSON export/import & VTT setup' },
+              ].map((sec) => {
+                const IconComponent = sec.icon;
+                const isCurrent = activeTab === sec.id;
+                return (
+                  <button
+                    key={sec.id}
+                    onClick={() => {
+                      setActiveTab(sec.id as any);
+                      setIsHamburgerOpen(false);
+                      soundFX.playClockTick();
+                    }}
+                    className={`w-full min-h-[48px] px-3 py-2.5 rounded-lg flex items-center space-x-3 transition text-left group ${
+                      isCurrent
+                        ? 'bg-gradient-to-r from-amber-500/20 to-purple-900/20 border border-amber-500/50 text-amber-200 shadow-md'
+                        : 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800/80'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 rounded-md flex items-center justify-center shrink-0 ${
+                      isCurrent ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-slate-300 group-hover:text-amber-400'
+                    }`}>
+                      <IconComponent className="w-4 h-4" />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <span className={`font-serif font-bold text-xs ${isCurrent ? 'text-amber-300' : 'text-slate-200'}`}>
+                          {sec.label}
+                        </span>
+                        {!!sec.badge && sec.badge > 0 && (
+                          <span className="bg-red-900/90 text-red-200 border border-red-700 text-[10px] font-bold px-1.5 py-0.2 rounded-full">
+                            {sec.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400 truncate">{sec.desc}</p>
+                    </div>
+
+                    {isCurrent && (
+                      <span className="w-2 h-2 rounded-full bg-amber-400 shadow-sm shadow-amber-400 shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sidebar Content Area */}
