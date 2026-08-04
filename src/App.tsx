@@ -401,13 +401,6 @@ export default function App() {
     setIsWidgetCatalogOpen(false);
   };
 
-  const handleActionTokenAdded = () => {
-    setSessionState((prev) => ({
-      ...prev,
-      actionTokens: prev.actionTokens + 1,
-    }));
-  };
-
   const handleAddAdversaryToCombat = (participant: CombatParticipant) => {
     setSessionState((prev) => ({
       ...prev,
@@ -543,7 +536,6 @@ export default function App() {
                 <PlayerDashboard
                   players={players}
                   setPlayers={setPlayers}
-                  onActionTokenAdded={handleActionTokenAdded}
                 />
               )}
 
@@ -570,7 +562,6 @@ export default function App() {
                   <p className="text-slate-400 text-[11px]">Choose modifier and trigger a duality 2d12 roll (Hope & Fear dice):</p>
                   <DualityDiceRollerEmbed
                     onRollCompleted={(res) => {
-                      handleActionTokenAdded();
                       // Append to chat log
                       const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                       const rollEntry: ChatEntry = {
@@ -745,7 +736,6 @@ export default function App() {
               <PlayerDashboard
                 players={players}
                 setPlayers={setPlayers}
-                onActionTokenAdded={handleActionTokenAdded}
               />
             )}
 
@@ -796,9 +786,7 @@ export default function App() {
       <DualityDiceRoller
         isOpen={isDiceRollerOpen}
         onClose={() => setIsDiceRollerOpen(false)}
-        onRollCompleted={(res) => {
-          handleActionTokenAdded();
-        }}
+        onRollCompleted={() => {}}
       />
 
       <RulesReferenceModal

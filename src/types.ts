@@ -147,10 +147,14 @@ export interface DomainCardRef {
 export interface PlayerCharacter {
   id: string;
   name: string;
+  pronouns?: string;
   ancestry: string;
+  ancestryFeature?: string;
   community: string;
+  communityFeature?: string;
   class: string;
   subclass: string;
+  classFeature?: string;
   level: number;
   agility: number;
   strength: number;
@@ -172,6 +176,12 @@ export interface PlayerCharacter {
   conditions: Condition[];
   experiences: Experience[];
   domainCards: DomainCardRef[];
+  equipment?: string[];
+  inventory?: string;
+  description?: string;
+  background?: string;
+  connections?: string;
+  gold?: number;
   notes?: string;
   spotlightCount: number; // times acted in current scene
   avatarColor?: string;
@@ -300,6 +310,8 @@ export interface SrdItem {
   name: string;
   category: 'Weapon' | 'Armor' | 'Gear' | 'Magic Item';
   subCategory?: string;
+  tier?: number;
+  isSecondary?: boolean;
   range?: string;
   damage?: string;
   armorRating?: number;
@@ -307,5 +319,6 @@ export interface SrdItem {
   traitRequirement?: string;
   description: string;
   cost?: string;
+  features?: Array<{ name: string; description: string }>;
 }
 

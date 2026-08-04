@@ -62,18 +62,6 @@ export const TopBar: React.FC<TopBarProps> = ({
     });
   };
 
-  const handleActionTokenChange = (delta: number) => {
-    setSessionState((prev) => {
-      const nextTokens = Math.max(0, prev.actionTokens + delta);
-      if (delta > 0) soundFX.playClockTick();
-      return { ...prev, actionTokens: nextTokens };
-    });
-  };
-
-  const handleClearActionTokens = () => {
-    setSessionState((prev) => ({ ...prev, actionTokens: 0 }));
-  };
-
   const toggleAmbientSound = () => {
     const newState = soundFX.toggleAmbientPad();
     setIsAmbientOn(newState);
@@ -104,9 +92,8 @@ export const TopBar: React.FC<TopBarProps> = ({
           </div>
         </div>
 
-        {/* Core Session Trackers: Fear Pool & Action Tracker */}
+        {/* Core Session Trackers: Fear Pool Counter */}
         <div className="flex items-center space-x-3 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800">
-          {/* Fear Pool Counter */}
           <div className="flex items-center space-x-2 px-2.5 py-1 bg-red-950/40 rounded-lg border border-red-900/40">
             <div className="flex items-center space-x-1.5">
               <Skull className="w-4 h-4 text-purple-400 animate-pulse" />
@@ -132,44 +119,6 @@ export const TopBar: React.FC<TopBarProps> = ({
               >
                 <Plus className="w-3 h-3" />
               </button>
-            </div>
-          </div>
-
-          {/* Action Tokens Counter */}
-          <div className="flex items-center space-x-2 px-2.5 py-1 bg-amber-950/30 rounded-lg border border-amber-900/40">
-            <div className="flex items-center space-x-1.5">
-              <Zap className="w-4 h-4 text-amber-400" />
-              <span className="text-xs font-semibold text-amber-200 uppercase tracking-wider">
-                Action Tokens
-              </span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <button
-                onClick={() => handleActionTokenChange(-1)}
-                className="w-5 h-5 rounded bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-xs text-slate-300 transition"
-                title="Spend 1 Action Token"
-              >
-                <Minus className="w-3 h-3" />
-              </button>
-              <span className="font-mono text-base font-bold text-amber-400 min-w-[24px] text-center">
-                {sessionState.actionTokens}
-              </span>
-              <button
-                onClick={() => handleActionTokenChange(1)}
-                className="w-5 h-5 rounded bg-amber-700/80 hover:bg-amber-600 flex items-center justify-center text-xs text-amber-100 transition"
-                title="Add 1 Action Token"
-              >
-                <Plus className="w-3 h-3" />
-              </button>
-              {sessionState.actionTokens > 0 && (
-                <button
-                  onClick={handleClearActionTokens}
-                  className="ml-1 text-[10px] text-amber-400/80 hover:text-amber-300 underline px-1"
-                  title="Clear all tokens"
-                >
-                  Clear
-                </button>
-              )}
             </div>
           </div>
         </div>
@@ -329,7 +278,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             }`}
           >
             <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-            <span>Domain Deck & SRD</span>
+            <span>Data</span>
           </button>
 
           <button

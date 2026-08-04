@@ -85,8 +85,8 @@ const AVAILABLE_WIDGET_TYPES: {
   },
   {
     type: 'domain-deck',
-    title: 'Domain Deck & Ability Cards SRD',
-    description: 'Quick lookup for all 9 Domain ability cards, Class features, Ancestries, and Communities.',
+    title: 'Data & SRD Vault',
+    description: 'Quick lookup for Domain Cards, Weapons, SRD Loot, Class features, Ancestries, and Communities.',
     icon: <BookOpen className="w-5 h-5 text-cyan-400" />,
     defaultColSpan: 2,
   },

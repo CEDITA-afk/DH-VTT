@@ -71,16 +71,7 @@ export const PlayerViewModal: React.FC<PlayerViewModalProps> = ({
           </div>
         </div>
 
-        {/* Action Tokens Badge */}
         <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-2 bg-amber-950/60 px-4 py-2 rounded-xl border border-amber-500/40">
-            <Zap className="w-5 h-5 text-amber-400 animate-pulse" />
-            <span className="text-xs uppercase font-bold text-amber-200">Action Tokens:</span>
-            <span className="font-mono text-xl font-extrabold text-amber-300">
-              {sessionState.actionTokens}
-            </span>
-          </div>
-
           <button
             onClick={onClose}
             className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition"

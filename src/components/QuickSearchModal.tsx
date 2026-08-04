@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, X, Skull, Layers, BookOpen, User } from 'lucide-react';
+import { Search, X, Skull, Layers, BookOpen, User, Sword } from 'lucide-react';
 import { ADVERSARIES_DATA } from '../data/adversaries';
 import { ENVIRONMENTS_DATA } from '../data/environments';
 import { RULES_DATA } from '../data/rulesData';
+import { ITEMS_DATA } from '../data/itemsData';
 import { PlayerCharacter } from '../types';
 
 interface QuickSearchModalProps {
@@ -50,6 +51,16 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
   const matchedRules = q
     ? RULES_DATA.filter((r) => r.title.toLowerCase().includes(q) || r.summary.toLowerCase().includes(q))
     : RULES_DATA.slice(0, 3);
+
+  const matchedWeapons = q
+    ? ITEMS_DATA.filter(
+        (i) =>
+          i.name.toLowerCase().includes(q) ||
+          i.description.toLowerCase().includes(q) ||
+          (i.damage && i.damage.toLowerCase().includes(q)) ||
+          (i.features && i.features.some((f) => f.name.toLowerCase().includes(q) || f.description.toLowerCase().includes(q)))
+      ).slice(0, 4)
+    : ITEMS_DATA.slice(0, 3);
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-start justify-center pt-20 p-4">
@@ -142,6 +153,39 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
                 >
                   <div className="font-bold text-slate-200">{rule.title}</div>
                   <div className="text-slate-400 text-[11px] line-clamp-1">{rule.summary}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Weapons & Items SRD */}
+          {matchedWeapons.length > 0 && (
+            <div className="space-y-1.5">
+              <span className="font-bold text-amber-400 flex items-center gap-1">
+                <Sword className="w-3.5 h-3.5" />
+                <span>Weapons & Items SRD</span>
+              </span>
+              {matchedWeapons.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 hover:border-amber-500/50 space-y-1"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-amber-200">{item.name}</span>
+                    <span className="text-slate-400 text-[10px] font-mono">
+                      {item.tier !== undefined ? `Tier ${item.tier}` : item.cost}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 flex items-center gap-2 font-mono">
+                    {item.damage && <span className="text-red-400">DMG: {item.damage}</span>}
+                    {item.range && <span className="text-blue-400">RNG: {item.range}</span>}
+                    {item.traitRequirement && <span className="text-purple-400">Trait: {item.traitRequirement}</span>}
+                  </div>
+                  {item.features && item.features.length > 0 && (
+                    <div className="text-[10px] text-amber-300/90 italic">
+                      Features: {item.features.map((f) => f.name).join(', ')}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

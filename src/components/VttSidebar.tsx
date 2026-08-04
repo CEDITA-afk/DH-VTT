@@ -29,6 +29,10 @@ import {
   Menu,
   X,
   ChevronDown,
+  ExternalLink,
+  Maximize2,
+  Minimize2,
+  MoveHorizontal,
 } from 'lucide-react';
 import { SessionState, PlayerCharacter, CombatParticipant, CountdownClock, EnvironmentCard, DomainCard, Campaign, VttScene } from '../types';
 import { rollDualityDice } from '../utils/dualityDice';
@@ -37,6 +41,7 @@ import { RULES_DATA } from '../data/rulesData';
 import { ADVERSARIES_DATA } from '../data/adversaries';
 import { ENVIRONMENTS_DATA } from '../data/environments';
 import { ITEMS_DATA } from '../data/itemsData';
+import { GM_HELP_DATA } from '../data/gmHelpData';
 
 export interface ChatEntry {
   id: string;
@@ -95,6 +100,39 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
   const [activeTab, setActiveTab] = useState<'chat' | 'combat' | 'scenes' | 'journal' | 'compendium' | 'settings'>('chat');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
+
+  // Dynamic Sidebar Width (Enlargeable / Shrinkable)
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    const saved = localStorage.getItem('vtt_sidebar_width');
+    return saved ? parseInt(saved, 10) : 340;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const [isSrdModalOpen, setIsSrdModalOpen] = useState(false);
+  const [activeSrdUrl, setActiveSrdUrl] = useState('https://callmepartario.github.io/og-dhsrd/#gm-guidance');
+  const [gmHelpSearch, setGmHelpSearch] = useState('');
+
+  const handleMouseDownResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = startX - moveEvent.clientX; // dragging left increases width
+      const newWidth = Math.max(280, Math.min(750, startWidth + deltaX));
+      setSidebarWidth(newWidth);
+      localStorage.setItem('vtt_sidebar_width', newWidth.toString());
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
   
   // Campaigns & Scenes UI States
   const [showAddCampaign, setShowAddCampaign] = useState(false);
@@ -366,7 +404,8 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
   const [ruleSearch, setRuleSearch] = useState('');
   const [advSearch, setAdvSearch] = useState('');
   const [itemSearch, setItemSearch] = useState('');
-  const [itemCategoryFilter, setItemCategoryFilter] = useState<'All' | 'Weapon' | 'Armor' | 'Gear' | 'Magic Item'>('All');
+  const [itemCategoryFilter, setItemCategoryFilter] = useState<'All' | 'Weapon' | 'Loot' | 'Consumable' | 'Armor' | 'Gear' | 'Magic Item'>('All');
+  const [weaponTierFilter, setWeaponTierFilter] = useState<number | 'All'>('All');
   
   // Sound toggle helper
   const [isAmbientOn, setIsAmbientOn] = useState(false);
@@ -428,12 +467,6 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
         };
 
         setChatLog((prev) => [...prev, rollEntry]);
-        
-        // Add Action token on any dice roll
-        setSessionState((prev) => ({
-          ...prev,
-          actionTokens: prev.actionTokens + 1,
-        }));
 
         if (roll.isCritical || roll.outcome.includes('Hope')) {
           soundFX.playHopeChime();
@@ -463,14 +496,6 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
       const nextFear = Math.max(0, Math.min(prev.maxFearPool, prev.fearPool + delta));
       if (delta > 0) soundFX.playFearBoom();
       return { ...prev, fearPool: nextFear };
-    });
-  };
-
-  const handleActionTokenChange = (delta: number) => {
-    setSessionState((prev) => {
-      const nextTokens = Math.max(0, prev.actionTokens + delta);
-      if (delta > 0) soundFX.playClockTick();
-      return { ...prev, actionTokens: nextTokens };
     });
   };
 
@@ -530,10 +555,28 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
         </span>
       </button>
 
+      {/* Left-edge Draggable Resizer Bar (Enlarge / Shrink Panel) */}
+      {!isCollapsed && (
+        <div
+          onMouseDown={handleMouseDownResize}
+          className={`absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize hover:bg-amber-500/60 z-50 group flex items-center justify-center transition-colors ${
+            isResizing ? 'bg-amber-500/80 ring-2 ring-amber-400' : ''
+          }`}
+          title="Click & drag left/right to enlarge or shrink sidebar"
+        >
+          <div className="w-1 h-12 bg-slate-700 group-hover:bg-amber-400 rounded-full transition-colors" />
+        </div>
+      )}
+
       {/* Main Sidebar Contents */}
-      <div className={`h-full bg-slate-900 border-l border-slate-800 flex flex-col relative transition-all duration-300 ease-in-out ${
-        isCollapsed ? 'w-0 border-l-0 overflow-hidden' : 'w-80'
-      }`}>
+      <div
+        style={{
+          width: isCollapsed ? '0px' : `${sidebarWidth}px`,
+        }}
+        className={`h-full bg-slate-900 border-l border-slate-800 flex flex-col relative transition-all duration-75 ease-out ${
+          isCollapsed ? 'border-l-0 overflow-hidden' : ''
+        }`}
+      >
       {/* VTT Sidebar Header with Responsive Hamburger Menu */}
       <div className="relative bg-slate-950 border-b border-slate-800 px-2 py-1.5 flex items-center justify-between gap-2 z-40 select-none">
         {/* Hamburger Toggle Button & Active Section Title */}
@@ -585,7 +628,7 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
           </button>
         </div>
 
-        {/* Compact Quick Icon Strip for Desktop & Tablet */}
+        {/* Compact Quick Icon Strip & Width Control for Desktop & Tablet */}
         <div className="flex items-center space-x-1 shrink-0">
           <button
             onClick={() => { setActiveTab('chat'); setIsHamburgerOpen(false); soundFX.playClockTick(); }}
@@ -609,6 +652,50 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
               <span className="absolute -top-0.5 -right-0.5 bg-red-600 text-white rounded-full w-2 h-2" />
             )}
           </button>
+
+          {/* Panel Size Controls */}
+          <div className="flex items-center border border-slate-800 rounded bg-slate-950 p-0.5 text-slate-400 text-[10px] space-x-0.5">
+            <button
+              onClick={() => {
+                const nextWidth = Math.max(280, sidebarWidth - 40);
+                setSidebarWidth(nextWidth);
+                localStorage.setItem('vtt_sidebar_width', nextWidth.toString());
+                soundFX.playClockTick();
+              }}
+              className="px-1.5 py-1 hover:text-amber-300 hover:bg-slate-900 rounded font-mono font-bold"
+              title="Shrink Sidebar Panel Width"
+            >
+              -
+            </button>
+            <button
+              onClick={() => {
+                // Cycle sizes: 320 -> 460 -> 620 -> 320
+                let next = 320;
+                if (sidebarWidth < 400) next = 460;
+                else if (sidebarWidth < 550) next = 620;
+                else next = 320;
+                setSidebarWidth(next);
+                localStorage.setItem('vtt_sidebar_width', next.toString());
+                soundFX.playClockTick();
+              }}
+              className="px-1 py-0.5 text-amber-400 hover:text-amber-200 font-mono text-[9px] font-bold"
+              title="Cycle Sidebar Preset Widths (Standard, Wide, Extra Wide)"
+            >
+              {sidebarWidth}p
+            </button>
+            <button
+              onClick={() => {
+                const nextWidth = Math.min(750, sidebarWidth + 40);
+                setSidebarWidth(nextWidth);
+                localStorage.setItem('vtt_sidebar_width', nextWidth.toString());
+                soundFX.playClockTick();
+              }}
+              className="px-1.5 py-1 hover:text-amber-300 hover:bg-slate-900 rounded font-mono font-bold"
+              title="Enlarge Sidebar Panel Width"
+            >
+              +
+            </button>
+          </div>
         </div>
 
         {/* Hamburger Overlay Dropdown Menu */}
@@ -631,7 +718,7 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
                 { id: 'combat', label: 'Active Combat Runner', icon: Swords, desc: 'Initiative order, adversary HP & stress tracking', badge: sessionState.combatParticipants.length },
                 { id: 'scenes', label: 'Scenes & Environments', icon: Map, desc: 'Manage battleground maps & environmental hazards', badge: activeCampaign?.scenes.length },
                 { id: 'journal', label: 'Journal & Session Clocks', icon: Book, desc: 'Track threat countdown clocks & GM session notes', badge: sessionState.clocks.length },
-                { id: 'compendium', label: 'Compendium & Rules SRD', icon: BookOpen, desc: 'Browse adversaries, domain cards & rulebooks' },
+                { id: 'compendium', label: 'Data & Rules SRD', icon: BookOpen, desc: 'Browse adversaries, weapons, SRD loot, domain cards & rulebooks' },
                 { id: 'settings', label: 'Campaign Settings & Export', icon: Settings, desc: 'Manage campaigns, JSON export/import & VTT setup' },
               ].map((sec) => {
                 const IconComponent = sec.icon;
@@ -800,19 +887,6 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
                   <button onClick={() => handleFearChange(-1)} className="w-5 h-5 rounded bg-slate-900 text-slate-300 font-bold">-</button>
                   <span className="font-mono text-base font-bold text-amber-400">{sessionState.fearPool}</span>
                   <button onClick={() => handleFearChange(1)} className="w-5 h-5 rounded bg-purple-900 text-purple-100 font-bold">+</button>
-                </div>
-              </div>
-
-              {/* Action Tokens */}
-              <div className="bg-slate-950/70 p-2 border border-slate-800 rounded space-y-1.5">
-                <span className="text-[10px] uppercase font-bold text-amber-400 flex items-center gap-1">
-                  <Zap className="w-3 h-3" />
-                  Actions
-                </span>
-                <div className="flex items-center justify-between">
-                  <button onClick={() => handleActionTokenChange(-1)} className="w-5 h-5 rounded bg-slate-900 text-slate-300 font-bold">-</button>
-                  <span className="font-mono text-base font-bold text-amber-400">{sessionState.actionTokens}</span>
-                  <button onClick={() => handleActionTokenChange(1)} className="w-5 h-5 rounded bg-amber-600 text-slate-950 font-bold">+</button>
                 </div>
               </div>
             </div>
@@ -1223,6 +1297,102 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
         {/* 5. Rules & Monster Compendium Tab */}
         {activeTab === 'compendium' && (
           <div className="p-3 space-y-4">
+            {/* GM Help & OG-DHSRD Quick SRD Banner */}
+            <div className="bg-gradient-to-r from-amber-950/80 via-slate-900 to-slate-950 p-3 rounded-xl border border-amber-500/40 shadow-lg space-y-2">
+              <div className="flex justify-between items-start">
+                <div>
+                  <span className="bg-amber-500 text-slate-950 text-[8px] font-black uppercase px-1.5 py-0.5 rounded font-mono">
+                    Official Web SRD
+                  </span>
+                  <h4 className="font-serif font-bold text-xs text-amber-200 mt-1">
+                    Open Gaming Daggerheart SRD (OG-DHSRD)
+                  </h4>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-slate-300 leading-tight">
+                GM rules, fear moves, difficulty DCs, countdown clocks, and campaign guides from <span className="text-amber-300 font-mono">https://callmepartario.github.io/og-dhsrd/</span>
+              </p>
+
+              <div className="flex gap-1.5 pt-1">
+                <button
+                  onClick={() => setIsSrdModalOpen(true)}
+                  className="flex-1 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded text-[10px] transition flex items-center justify-center gap-1 shadow"
+                >
+                  <BookOpen className="w-3 h-3" />
+                  <span>Open SRD Viewer</span>
+                </button>
+
+                <a
+                  href="https://callmepartario.github.io/og-dhsrd/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 text-[10px] font-semibold rounded border border-slate-700 transition flex items-center gap-1"
+                >
+                  <span>New Tab</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            {/* GM Reference & Quick Guides */}
+            <div className="space-y-2 border-t border-slate-800 pt-2">
+              <span className="text-[10px] font-bold text-amber-400 uppercase block">GM Help & Running Guidelines</span>
+              <input
+                type="text"
+                value={gmHelpSearch}
+                onChange={(e) => setGmHelpSearch(e.target.value)}
+                placeholder="Search GM help (moves, fear, difficulty, budget)..."
+                className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs focus:outline-none focus:border-amber-500 text-slate-200"
+              />
+
+              <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                {GM_HELP_DATA.filter((g) =>
+                  !gmHelpSearch ||
+                  g.title.toLowerCase().includes(gmHelpSearch.toLowerCase()) ||
+                  g.summary.toLowerCase().includes(gmHelpSearch.toLowerCase()) ||
+                  g.bulletPoints.some((b) => b.toLowerCase().includes(gmHelpSearch.toLowerCase()))
+                ).map((guide) => (
+                  <div
+                    key={guide.id}
+                    className="bg-slate-950/70 p-2 border border-slate-800/80 rounded space-y-1 hover:border-amber-500/40 transition"
+                  >
+                    <div className="flex justify-between items-center gap-1">
+                      <span className="font-serif font-bold text-xs text-amber-200 truncate">{guide.title}</span>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => {
+                            setActiveSrdUrl(guide.anchorUrl);
+                            setIsSrdModalOpen(true);
+                          }}
+                          className="px-1 py-0.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 rounded text-[8px] font-mono border border-amber-500/30 transition flex items-center gap-0.5"
+                          title="Open in embedded viewer"
+                        >
+                          <BookOpen className="w-2.5 h-2.5" />
+                          <span>#{guide.anchorId}</span>
+                        </button>
+                        <a
+                          href={guide.anchorUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-slate-400 hover:text-amber-300 transition"
+                          title="Open in new tab"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-300 leading-snug">{guide.summary}</p>
+                    <ul className="text-[9px] text-slate-400 space-y-0.5 pt-0.5 border-t border-slate-900">
+                      {guide.bulletPoints.slice(0, 3).map((bp, i) => (
+                        <li key={i} className="truncate">• {bp}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Rules SRD Directory */}
             <div className="space-y-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase block">Rules Reference SRD</span>
@@ -1287,25 +1457,28 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
               </div>
             </div>
 
-            {/* Daggerheart Items Compendium */}
+            {/* Daggerheart Items & Weapons SRD */}
             <div className="space-y-2 border-t border-slate-800 pt-3">
-              <span className="text-[10px] font-bold text-slate-400 uppercase block">Foundryborne Items SRD</span>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider">Foundryborne Weapons & Items SRD</span>
+                <span className="text-[9px] font-mono text-slate-500">{ITEMS_DATA.length} Entries</span>
+              </div>
               
               <input
                 type="text"
                 value={itemSearch}
                 onChange={(e) => setItemSearch(e.target.value)}
-                placeholder="Search items (e.g. sword, potion, cloak)..."
-                className="w-full bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs focus:outline-none focus:border-amber-500"
+                placeholder="Search weapons, features (e.g. Reliable, Bow, Tier 3)..."
+                className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"
               />
 
               {/* Category Quick Filter Chips */}
-              <div className="flex flex-wrap gap-1 py-1">
-                {(['All', 'Weapon', 'Armor', 'Gear', 'Magic Item'] as const).map((cat) => (
+              <div className="flex flex-wrap gap-1 py-0.5">
+                {(['All', 'Weapon', 'Loot', 'Consumable', 'Armor', 'Gear', 'Magic Item'] as const).map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setItemCategoryFilter(cat)}
-                    className={`px-1.5 py-0.5 rounded text-[9px] font-bold transition uppercase ${
+                    className={`px-2 py-0.5 rounded text-[9px] font-bold transition uppercase ${
                       itemCategoryFilter === cat
                         ? 'bg-amber-500 text-slate-950'
                         : 'bg-slate-900 text-slate-400 hover:text-slate-200 hover:bg-slate-850'
@@ -1316,54 +1489,122 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
                 ))}
               </div>
 
-              <div className="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+              {/* Tier Filter Chips when Weapons are selected */}
+              {(itemCategoryFilter === 'All' || itemCategoryFilter === 'Weapon') && (
+                <div className="flex items-center space-x-1 text-[9px] text-slate-400 font-mono py-0.5 border-t border-slate-900 pt-1">
+                  <span className="text-[9px] text-slate-500 uppercase font-semibold">Tier:</span>
+                  {(['All', 0, 1, 2, 3, 4] as const).map((t) => (
+                    <button
+                      key={String(t)}
+                      onClick={() => setWeaponTierFilter(t)}
+                      className={`px-1.5 py-0.2 rounded transition ${
+                        weaponTierFilter === t
+                          ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold'
+                          : 'bg-slate-900 text-slate-400 hover:bg-slate-800'
+                      }`}
+                    >
+                      {t === 'All' ? 'All' : `T${t}`}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                 {ITEMS_DATA.filter((item) => {
-                  const matchSearch = item.name.toLowerCase().includes(itemSearch.toLowerCase()) || 
-                                      item.description.toLowerCase().includes(itemSearch.toLowerCase());
-                  const matchCategory = itemCategoryFilter === 'All' || item.category === itemCategoryFilter;
-                  return matchSearch && matchCategory;
+                  const s = itemSearch.toLowerCase().trim();
+                  const matchSearch =
+                    !s ||
+                    item.name.toLowerCase().includes(s) ||
+                    item.description.toLowerCase().includes(s) ||
+                    (item.subCategory && item.subCategory.toLowerCase().includes(s)) ||
+                    (item.traitRequirement && item.traitRequirement.toLowerCase().includes(s)) ||
+                    (item.damage && item.damage.toLowerCase().includes(s)) ||
+                    (item.features && item.features.some((f) => f.name.toLowerCase().includes(s) || f.description.toLowerCase().includes(s)));
+
+                  let matchCategory = itemCategoryFilter === 'All' || item.category === itemCategoryFilter;
+                  if (itemCategoryFilter === 'Loot') matchCategory = item.cost === 'Loot' || item.subCategory?.includes('Loot') || false;
+                  else if (itemCategoryFilter === 'Consumable') matchCategory = item.cost === 'Consumable' || item.subCategory?.includes('Consumable') || false;
+                  const matchTier =
+                    weaponTierFilter === 'All' || item.tier === undefined || item.tier === weaponTierFilter;
+
+                  return matchSearch && matchCategory && matchTier;
                 }).map((item) => (
                   <div
                     key={item.id}
-                    className="bg-slate-950/60 p-2.5 border border-slate-800/80 rounded-lg space-y-1.5 text-[11px] hover:border-slate-700 transition"
+                    className="bg-slate-950/80 p-2.5 border border-slate-800/90 rounded-lg space-y-2 text-[11px] hover:border-amber-500/40 transition shadow-sm"
                   >
+                    {/* Header */}
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-bold text-amber-200">{item.name}</div>
-                        <span className="text-[9px] text-slate-500 uppercase font-mono tracking-wider">
-                          {item.subCategory || item.category} {item.hands ? `• ${item.hands}H` : ''}
-                        </span>
+                        <div className="font-serif font-bold text-amber-200 text-xs flex items-center gap-1.5">
+                          <span>{item.name}</span>
+                          {item.tier !== undefined && (
+                            <span className="text-[8px] bg-amber-950 text-amber-400 border border-amber-800/80 px-1 py-0.2 rounded font-mono">
+                              Tier {item.tier}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[9px] text-slate-400 uppercase font-mono tracking-wider flex items-center gap-1 mt-0.5">
+                          <span>{item.subCategory || item.category}</span>
+                          {item.hands && <span>• {item.hands}H</span>}
+                          {item.isSecondary !== undefined && (
+                            <span className={`px-1 rounded text-[8px] ${item.isSecondary ? 'bg-purple-900/60 text-purple-300 border border-purple-700/60' : 'bg-slate-800 text-slate-300'}`}>
+                              {item.isSecondary ? 'Secondary' : 'Primary'}
+                            </span>
+                          )}
+                        </div>
                       </div>
+
                       <span className="text-[9px] font-semibold text-slate-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
                         {item.cost || 'Free'}
                       </span>
                     </div>
 
-                    <p className="text-[10px] text-slate-400 leading-relaxed italic">{item.description}</p>
-
-                    {/* Meta stats if applicable */}
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-mono border-t border-slate-900 pt-1.5 text-slate-400">
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 gap-1 bg-slate-900/60 p-1.5 rounded border border-slate-800/60 text-[9px] font-mono">
                       {item.damage && (
                         <div>
-                          <span className="text-red-400">DMG:</span> {item.damage}
+                          <span className="text-red-400 font-bold">DMG:</span> <span className="text-slate-200">{item.damage}</span>
                         </div>
                       )}
                       {item.range && (
                         <div>
-                          <span className="text-blue-400">RNG:</span> {item.range}
-                        </div>
-                      )}
-                      {item.armorRating !== undefined && (
-                        <div>
-                          <span className="text-amber-400">Armor Rating:</span> +{item.armorRating}
+                          <span className="text-blue-400 font-bold">RNG:</span> <span className="text-slate-200">{item.range}</span>
                         </div>
                       )}
                       {item.traitRequirement && (
                         <div>
-                          <span className="text-purple-400">Req:</span> {item.traitRequirement}
+                          <span className="text-purple-400 font-bold">Trait:</span> <span className="text-slate-200">{item.traitRequirement}</span>
+                        </div>
+                      )}
+                      {item.armorRating !== undefined && (
+                        <div>
+                          <span className="text-amber-400 font-bold">Armor:</span> <span className="text-slate-200">+{item.armorRating}</span>
                         </div>
                       )}
                     </div>
+
+                    {/* Features List */}
+                    {item.features && item.features.length > 0 && (
+                      <div className="space-y-1 border-t border-slate-800/60 pt-1.5">
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-amber-500/90 block">
+                          {item.category === 'Weapon' ? 'Weapon Features:' : 'Special Features & Actions:'}
+                        </span>
+                        <div className="space-y-1">
+                          {item.features.map((feat, idx) => (
+                            <div key={idx} className="bg-slate-900/80 p-1.5 rounded border border-slate-800/60 text-[10px]">
+                              <span className="font-bold text-amber-300">{feat.name}: </span>
+                              <span className="text-slate-300 leading-snug">{feat.description}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Description */}
+                    {item.description && (
+                      <p className="text-[10px] text-slate-300 leading-relaxed italic border-t border-slate-900 pt-1">{item.description}</p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1438,6 +1679,55 @@ export const VttSidebar: React.FC<VttSidebarProps> = ({
         )}
       </div>
       </div>
+
+      {/* Interactive SRD Iframe Modal Viewer */}
+      {isSrdModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-6 select-text">
+          <div className="bg-slate-900 border border-amber-500/60 rounded-2xl w-full max-w-6xl h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+            <div className="bg-slate-950 p-4 border-b border-slate-800 flex justify-between items-center shrink-0">
+              <div className="flex items-center space-x-2">
+                <BookOpen className="w-5 h-5 text-amber-400" />
+                <div>
+                  <h3 className="font-serif font-bold text-base text-amber-200">
+                    Open Gaming Daggerheart SRD Guide (OG-DHSRD)
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono">
+                    {activeSrdUrl}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <a
+                  href={activeSrdUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center gap-1.5"
+                >
+                  <span>Open External</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+
+                <button
+                  onClick={() => setIsSrdModalOpen(false)}
+                  className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-lg transition"
+                >
+                  Close Viewer
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 bg-slate-950 relative">
+              <iframe
+                src={activeSrdUrl}
+                title="Open Gaming Daggerheart SRD"
+                className="w-full h-full border-0"
+                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

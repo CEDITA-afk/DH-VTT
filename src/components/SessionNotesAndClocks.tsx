@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { CountdownClock, SessionState } from '../types';
 import { soundFX } from '../utils/audioSynth';
+import { DAGGERHEART_ROLLTABLES } from '../data/rollTablesData';
 
 interface SessionNotesAndClocksProps {
   sessionState: SessionState;
@@ -80,8 +81,22 @@ export const SessionNotesAndClocks: React.FC<SessionNotesAndClocksProps> = ({
   };
 
   const generateLoot = () => {
-    const shuffled = [...SAMPLE_LOOT].sort(() => 0.5 - Math.random());
-    setGeneratedLoot(shuffled.slice(0, 3));
+    const lootTables = DAGGERHEART_ROLLTABLES.filter(t => t.category === 'Loot & Items');
+    const items: string[] = [];
+    
+    lootTables.forEach(t => {
+      const idx = Math.floor(Math.random() * t.results.length);
+      items.push(`${t.title}: ${t.results[idx].text}`);
+    });
+
+    if (items.length < 3) {
+      const shuffled = [...SAMPLE_LOOT].sort(() => 0.5 - Math.random());
+      while (items.length < 3) {
+        items.push(shuffled.pop() || '50 Gold Pieces');
+      }
+    }
+
+    setGeneratedLoot(items.slice(0, 3));
     soundFX.playHopeChime();
   };
 
